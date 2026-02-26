@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  name         String?
+  passwordHash String
+  role         String      @default("VIEWER") // ADMIN, EDITOR, VIEWER
+  groups       GroupUser[]
+  questions    Question[]
+  dashboards   Dashboard[]
+  activities   Activity[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Group {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  members     GroupUser[]
+  permissions Permission[]
+  createdAt   DateTime     @default(now())
+}
+
+model GroupUser {
+  group   Group  @relation(fields: [groupId], references: [id])
+  groupId String
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String
+
+  @@id([groupId, userId])
+}
+
+model DatabaseConnection {
+  id           String   @id @default(cuid())
+  name         String
+  engine       String   // POSTGRESQL, MYSQL, SQLITE, MSSQL
+  host         String
+  port         Int
+  databaseName String
+  username     String
+  passwordEnc  String   // AES-256-GCM encrypted
+  ssl          Boolean  @default(false)
+  schemaCache  String?  // JSON string — cached introspection
+  lastSyncedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Collection {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  parentId    String?
+  parent      Collection?  @relation("CollectionTree", fields: [parentId], references: [id])
+  children    Collection[] @relation("CollectionTree")
+  questions   Question[]
+  dashboards  Dashboard[]
+  permissions Permission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Question {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  type            String          // QUERY_BUILDER, NATIVE_SQL
+  queryDefinition String          // JSON — AQR or raw SQL
+  vizSettings     String?         // JSON — chart type + config
+  databaseId      String
+  collectionId    String?
+  collection      Collection?     @relation(fields: [collectionId], references: [id])
+  creatorId       String
+  creator         User            @relation(fields: [creatorId], references: [id])
+  dashboardCards  DashboardCard[]
+  cacheTTL        Int?            // seconds
+  tags            String?         // JSON array
+  verified        Boolean         @default(false)
+  archived        Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Dashboard {
+  id           String          @id @default(cuid())
+  name         String
+  description  String?
+  collectionId String?
+  collection   Collection?     @relation(fields: [collectionId], references: [id])
+  creatorId    String
+  creator      User            @relation(fields: [creatorId], references: [id])
+  cards        DashboardCard[]
+  filters      String?         // JSON — filter definitions
+  isPublic     Boolean         @default(false)
+  publicSlug   String?         @unique
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model DashboardCard {
+  id          String    @id @default(cuid())
+  dashboardId String
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  questionId  String?
+  question    Question? @relation(fields: [questionId], references: [id])
+  cardType    String    @default("QUESTION") // QUESTION, TEXT, LINK
+  content     String?   // JSON — for text/link cards
+  layoutX     Int
+  layoutY     Int
+  layoutW     Int
+  layoutH     Int
+  createdAt   DateTime  @default(now())
+}
+
+model Permission {
+  id           String      @id @default(cuid())
+  groupId      String
+  group        Group       @relation(fields: [groupId], references: [id])
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id])
+  resourceType String      // "database", "collection", "table"
+  resourceId   String
+  accessLevel  String      // NONE, VIEW, EDIT, ADMIN
+
+  @@unique([groupId, resourceType, resourceId])
+}
+
+model Activity {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String   // "created_question", "ran_query", etc.
+  targetType String?
+  targetId   String?
+  metadata   String?  // JSON
+  createdAt  DateTime @default(now())
+}

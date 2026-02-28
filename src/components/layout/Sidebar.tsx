@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
-  BarChart3,
   Home,
   FolderOpen,
   PlusCircle,
@@ -24,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useState } from "react";
+import { Logo } from "@/components/ui/logo";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -54,12 +54,12 @@ export function AppSidebar() {
     <aside
       className={cn(
         "flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
+        collapsed ? "w-16" : "w-64",
       )}
     >
       {/* Logo */}
       <div className="flex items-center gap-2 p-4 h-14">
-        <BarChart3 className="h-6 w-6 text-primary shrink-0" />
+        <Logo size={24} className="text-primary" />
         {!collapsed && (
           <span className="text-lg font-bold text-sidebar-foreground">
             InsightBase
@@ -97,7 +97,7 @@ export function AppSidebar() {
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
               )}
             >
               <item.icon className="h-4 w-4 shrink-0" />
@@ -137,7 +137,7 @@ export function AppSidebar() {
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
                   )}
                 >
                   <item.icon className="h-4 w-4 shrink-0" />
@@ -167,7 +167,7 @@ export function AppSidebar() {
         <div
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-md",
-            collapsed && "justify-center"
+            collapsed && "justify-center",
           )}
         >
           <Avatar className="h-8 w-8 shrink-0">

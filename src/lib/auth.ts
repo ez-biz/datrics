@@ -33,11 +33,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        let role = user.role;
+        const adminEmail = process.env.ADMIN_EMAIL;
+
+        // Automatically assign ADMIN role if email matches the configured env var
+        if (adminEmail && user.email.toLowerCase() === adminEmail.toLowerCase()) {
+          role = "ADMIN";
+          if (user.role !== "ADMIN") {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { role: "ADMIN" },
+            });
+          }
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role,
         };
       },
     }),

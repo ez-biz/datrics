@@ -21,7 +21,6 @@ export function TableSelector() {
 
   useEffect(() => {
     if (!databaseId) {
-      setTables([]);
       return;
     }
 
@@ -111,7 +110,7 @@ export function TableSelector() {
         })}
         {filteredTables.length === 0 && (
           <div className="col-span-full p-4 text-sm text-center text-muted-foreground">
-            No tables matching "{search}"
+            No tables matching &quot;{search}&quot;
           </div>
         )}
       </div>

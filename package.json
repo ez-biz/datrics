@@ -1,12 +1,13 @@
 {
-  "name": "alpha-game",
+  "name": "datrics",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint --no-cache",
+    "make-admin": "node scripts/make-admin.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

@@ -33,7 +33,6 @@ export function ColumnSelector() {
 
   useEffect(() => {
     if (!databaseId || !sourceTable) {
-      setSchemaTable(null);
       return;
     }
 

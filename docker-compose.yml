@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - app-data:/app/data
+    environment:
+      - DATABASE_URL=file:./data/app.db
+      - AUTH_SECRET=${AUTH_SECRET:-please-run-npm-setup-first}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-please-run-npm-setup-first}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - NEXTAUTH_URL=http://localhost:3000
+
+  # Optional: Postgres instance for testing external database connections
+  # Start with: docker compose --profile with-postgres up
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: testdb
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    profiles:
+      - with-postgres
+
+volumes:
+  app-data:
+  pg-data:

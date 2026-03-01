@@ -7,6 +7,7 @@ import {
   AggregateColumn,
   SortClause,
   JoinClause,
+  HavingCondition,
 } from "./types";
 
 interface GeneratedSQL {
@@ -175,6 +176,20 @@ export function generateSQL(
     parts.push(`GROUP BY ${groupCols.join(", ")}`);
   }
 
+  // HAVING
+  if (query.having && query.having.length > 0) {
+    const havingParts = query.having.map((h) => {
+      const agg = buildAggregate(
+        { fn: h.aggregation.fn, column: h.aggregation.column },
+        engine
+      );
+      params.push(h.value);
+      const ph = paramPlaceholder(params.length, engine);
+      return `${agg} ${h.operator} ${ph}`;
+    });
+    parts.push(`HAVING ${havingParts.join(" AND ")}`);
+  }
+
   // ORDER BY
   if (query.orderBy.length > 0) {
     const orderCols = query.orderBy.map(
@@ -195,8 +210,12 @@ export function generateSQL(
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
-function buildAggregate(agg: AggregateColumn, engine: DBEngine): string {
-  const col = qualifiedColumn(agg, engine);
+function buildAggregate(
+  agg: { fn: AggregateColumn["fn"]; column: string; table?: string },
+  engine: DBEngine
+): string {
+  // Handle COUNT(*) specially - don't quote the asterisk
+  const col = agg.column === "*" ? "*" : qualifiedColumn(agg, engine);
   switch (agg.fn) {
     case "count":
       return `COUNT(${col})`;

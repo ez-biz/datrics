@@ -1,22 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Check, Columns3, Key, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryBuilderStore } from "@/stores/query-builder-store";
+import { useSchemaStore } from "@/stores/schema-store";
 import { Badge } from "@/components/ui/badge";
-
-interface SchemaColumn {
-  name: string;
-  type: string;
-  rawType: string;
-  isPrimaryKey: boolean;
-}
-
-interface SchemaTable {
-  name: string;
-  columns: SchemaColumn[];
-}
 
 export function ColumnSelector() {
   const {
@@ -28,32 +17,16 @@ export function ColumnSelector() {
     clearColumns,
   } = useQueryBuilderStore();
 
-  const [schemaTable, setSchemaTable] = useState<SchemaTable | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { fetchSchema, getTable, isLoading } = useSchemaStore();
 
   useEffect(() => {
-    if (!databaseId || !sourceTable) {
-      return;
+    if (databaseId) {
+      fetchSchema(databaseId);
     }
+  }, [databaseId, fetchSchema]);
 
-    setLoading(true);
-    fetch(`/api/databases/${databaseId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.schemaCache) {
-          try {
-            const parsed = JSON.parse(data.schemaCache);
-            const table = parsed.tables?.find(
-              (t: SchemaTable) => t.name === sourceTable,
-            );
-            setSchemaTable(table || null);
-          } catch {
-            setSchemaTable(null);
-          }
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [databaseId, sourceTable]);
+  const schemaTable = getTable(databaseId, sourceTable);
+  const loading = isLoading(databaseId);
 
   if (!sourceTable) {
     return (
@@ -90,7 +63,7 @@ export function ColumnSelector() {
     } else {
       selectAllColumns(
         schemaTable.columns.map((c) => c.name),
-        sourceTable,
+        sourceTable
       );
     }
   };

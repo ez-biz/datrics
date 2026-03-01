@@ -11,6 +11,9 @@ import {
   PanelLeft,
   BarChart3,
   Table,
+  History,
+  FileCode,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,27 +25,39 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SqlEditor } from "@/components/query/SqlEditor";
+
+interface SchemaColumn {
+  name: string;
+  type: string;
+  rawType: string;
+  isPrimaryKey: boolean;
+  nullable: boolean;
+}
+
+interface SchemaTable {
+  name: string;
+  columns: SchemaColumn[];
+}
 import { ResultsTable } from "@/components/query/ResultsTable";
 import { SchemaExplorer } from "@/components/query/SchemaExplorer";
 import { QueryChart, VizSettings } from "@/components/query/QueryChart";
 import { SaveQuestionDialog } from "@/components/query/SaveQuestionDialog";
+import { SqlHistoryPanel } from "@/components/query/SqlHistoryPanel";
+import { SqlTemplatesPanel } from "@/components/query/SqlTemplatesPanel";
+import { useSqlHistoryStore } from "@/stores/sql-history-store";
+import { formatSQL } from "@/lib/sql-formatter";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DatabaseOption {
   id: string;
   name: string;
   engine: string;
   databaseName: string;
-}
-
-interface SchemaTable {
-  name: string;
-  columns: {
-    name: string;
-    type: string;
-    rawType: string;
-    isPrimaryKey: boolean;
-    nullable: boolean;
-  }[];
 }
 
 interface QueryResultData {
@@ -53,6 +68,8 @@ interface QueryResultData {
   truncated: boolean;
   sql?: string;
 }
+
+type SidebarTab = "schema" | "history" | "templates";
 
 export default function SqlPlaygroundPage() {
   // State
@@ -65,10 +82,13 @@ export default function SqlPlaygroundPage() {
   const [running, setRunning] = useState(false);
   const [loadingSchema, setLoadingSchema] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("schema");
   const [activeTab, setActiveTab] = useState<string>("table");
   const [vizSettings, setVizSettings] = useState<VizSettings>({ chartType: "table" });
   const sqlRef = useRef(sql);
   sqlRef.current = sql;
+
+  const { addEntry } = useSqlHistoryStore();
 
   // Fetch databases
   useEffect(() => {
@@ -109,6 +129,9 @@ export default function SqlPlaygroundPage() {
       .finally(() => setLoadingSchema(false));
   }, [selectedDbId]);
 
+  // Get selected database info
+  const selectedDb = databases.find((d) => d.id === selectedDbId);
+
   // Run query
   const runQuery = useCallback(async () => {
     if (!selectedDbId) {
@@ -138,30 +161,65 @@ export default function SqlPlaygroundPage() {
       if (!res.ok) {
         setError(data.error || "Query failed");
         toast.error(data.error || "Query failed");
+
+        // Add to history with error
+        addEntry({
+          sql: currentSql,
+          databaseId: selectedDbId,
+          databaseName: selectedDb?.name || "Unknown",
+          error: data.error || "Query failed",
+        });
       } else {
         setResult(data);
         toast.success(`Query completed in ${data.executionTimeMs}ms`);
+
+        // Add to history with success
+        addEntry({
+          sql: currentSql,
+          databaseId: selectedDbId,
+          databaseName: selectedDb?.name || "Unknown",
+          executionTimeMs: data.executionTimeMs,
+          rowCount: data.rowCount,
+        });
       }
     } catch {
       setError("Network error");
       toast.error("Network error");
+
+      // Add to history with error
+      addEntry({
+        sql: currentSql,
+        databaseId: selectedDbId,
+        databaseName: selectedDb?.name || "Unknown",
+        error: "Network error",
+      });
     } finally {
       setRunning(false);
     }
-  }, [selectedDbId]);
+  }, [selectedDbId, selectedDb?.name, addEntry]);
 
-  // Insert text from schema explorer
+  // Insert text from schema explorer or templates
   const handleInsertText = useCallback((text: string) => {
-    setSql((prev) => {
-      // Simple: append at cursor position or end
-      const trimmed = prev.trimEnd();
-      return trimmed.endsWith(";")
-        ? `${trimmed.slice(0, -1)} ${text};`
-        : `${trimmed} ${text}`;
-    });
+    setSql(text);
   }, []);
 
-  const selectedDb = databases.find((d) => d.id === selectedDbId);
+  // Format SQL
+  const handleFormat = useCallback(() => {
+    const formatted = formatSQL(sql);
+    setSql(formatted);
+    toast.success("SQL formatted");
+  }, [sql]);
+
+  // Listen for format keyboard shortcut
+  useEffect(() => {
+    const handleFormatEvent = () => {
+      handleFormat();
+    };
+    window.addEventListener("sql-format-requested", handleFormatEvent);
+    return () => {
+      window.removeEventListener("sql-format-requested", handleFormatEvent);
+    };
+  }, [handleFormat]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
@@ -177,7 +235,7 @@ export default function SqlPlaygroundPage() {
         <Select value={selectedDbId} onValueChange={setSelectedDbId}>
           <SelectTrigger className="w-[220px]">
             <Database className="h-4 w-4 mr-2 text-muted-foreground" />
-            <SelectValue placeholder="Select database…" />
+            <SelectValue placeholder="Select database..." />
           </SelectTrigger>
           <SelectContent>
             {databases.map((db) => (
@@ -193,6 +251,25 @@ export default function SqlPlaygroundPage() {
           </SelectContent>
         </Select>
 
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleFormat}
+                disabled={!sql.trim()}
+              >
+                <Wand2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Format SQL
+              <kbd className="ml-2 text-xs bg-muted px-1 rounded">Shift+F</kbd>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         <Button
           onClick={runQuery}
           disabled={running || !selectedDbId}
@@ -203,9 +280,9 @@ export default function SqlPlaygroundPage() {
           ) : (
             <Play className="h-4 w-4" />
           )}
-          {running ? "Running…" : "Run"}
+          {running ? "Running..." : "Run"}
           <kbd className="hidden sm:inline-flex ml-1 text-xs bg-primary-foreground/20 px-1 rounded">
-            ⌘↵
+            Enter
           </kbd>
         </Button>
 
@@ -221,7 +298,7 @@ export default function SqlPlaygroundPage() {
           variant="ghost"
           size="icon"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          title={sidebarOpen ? "Hide schema" : "Show schema"}
+          title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
         >
           {sidebarOpen ? (
             <PanelLeftClose className="h-4 w-4" />
@@ -233,29 +310,90 @@ export default function SqlPlaygroundPage() {
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Schema Sidebar */}
+        {/* Sidebar */}
         {sidebarOpen && (
-          <div className="w-64 border-r flex-shrink-0 overflow-hidden">
-            {loadingSchema ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : schema.length > 0 ? (
-              <SchemaExplorer
-                tables={schema}
-                databaseName={selectedDb?.databaseName}
-                onInsert={handleInsertText}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full px-4 text-center gap-2">
-                <Database className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  {selectedDbId
-                    ? "No schema available. Sync the database first."
-                    : "Select a database to browse its schema."}
-                </p>
-              </div>
-            )}
+          <div className="w-72 border-r flex-shrink-0 overflow-hidden flex flex-col">
+            {/* Sidebar tabs */}
+            <div className="flex border-b">
+              <button
+                onClick={() => setSidebarTab("schema")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
+                  sidebarTab === "schema"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Database className="h-3.5 w-3.5" />
+                Schema
+              </button>
+              <button
+                onClick={() => setSidebarTab("history")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
+                  sidebarTab === "history"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <History className="h-3.5 w-3.5" />
+                History
+              </button>
+              <button
+                onClick={() => setSidebarTab("templates")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
+                  sidebarTab === "templates"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <FileCode className="h-3.5 w-3.5" />
+                Templates
+              </button>
+            </div>
+
+            {/* Sidebar content */}
+            <div className="flex-1 overflow-hidden">
+              {sidebarTab === "schema" && (
+                loadingSchema ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : schema.length > 0 ? (
+                  <SchemaExplorer
+                    tables={schema}
+                    databaseName={selectedDb?.databaseName}
+                    onInsert={(text) => {
+                      // Insert at cursor in editor
+                      setSql((prev) => {
+                        const trimmed = prev.trimEnd();
+                        return trimmed.endsWith(";")
+                          ? `${trimmed.slice(0, -1)} ${text};`
+                          : `${trimmed} ${text}`;
+                      });
+                    }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full px-4 text-center gap-2">
+                    <Database className="h-8 w-8 text-muted-foreground/40" />
+                    <p className="text-sm text-muted-foreground">
+                      {selectedDbId
+                        ? "No schema available. Sync the database first."
+                        : "Select a database to browse its schema."}
+                    </p>
+                  </div>
+                )
+              )}
+
+              {sidebarTab === "history" && (
+                <SqlHistoryPanel
+                  databaseId={selectedDbId}
+                  onSelect={handleInsertText}
+                />
+              )}
+
+              {sidebarTab === "templates" && (
+                <SqlTemplatesPanel onSelect={handleInsertText} />
+              )}
+            </div>
           </div>
         )}
 
@@ -268,6 +406,8 @@ export default function SqlPlaygroundPage() {
               onChange={setSql}
               onRun={runQuery}
               height="250px"
+              schema={schema}
+              databaseName={selectedDb?.databaseName}
             />
           </div>
 
@@ -327,7 +467,7 @@ export default function SqlPlaygroundPage() {
                   <p className="text-sm text-muted-foreground/60 mt-1">
                     Use{" "}
                     <kbd className="px-1 py-0.5 bg-muted rounded text-xs">
-                      ⌘ + Enter
+                      + Enter
                     </kbd>{" "}
                     to execute
                   </p>
@@ -339,7 +479,7 @@ export default function SqlPlaygroundPage() {
               <div className="flex items-center justify-center h-full gap-2">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 <span className="text-sm text-muted-foreground">
-                  Executing query…
+                  Executing query...
                 </span>
               </div>
             )}

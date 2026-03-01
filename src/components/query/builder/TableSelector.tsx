@@ -5,43 +5,23 @@ import { Table as TableIcon, Loader2, Database, Search, Check } from "lucide-rea
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useQueryBuilderStore } from "@/stores/query-builder-store";
-import { toast } from "sonner";
-
-interface SchemaTable {
-  name: string;
-  schema?: string;
-  columns: { name: string; type: string }[];
-}
+import { useSchemaStore } from "@/stores/schema-store";
 
 export function TableSelector() {
   const { databaseId, sourceTable, setSourceTable } = useQueryBuilderStore();
-  const [tables, setTables] = useState<SchemaTable[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { fetchSchema, getSchema, isLoading, errors } = useSchemaStore();
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!databaseId) {
-      return;
+    if (databaseId) {
+      fetchSchema(databaseId);
     }
+  }, [databaseId, fetchSchema]);
 
-    setLoading(true);
-    fetch(`/api/databases/${databaseId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.schemaCache) {
-          try {
-            const parsed = JSON.parse(data.schemaCache);
-            setTables(parsed.tables || []);
-          } catch {
-            setTables([]);
-          }
-        } else {
-          setTables([]);
-        }
-      })
-      .catch(() => toast.error("Failed to load schema"))
-      .finally(() => setLoading(false));
-  }, [databaseId]);
+  const schema = getSchema(databaseId);
+  const tables = schema?.tables || [];
+  const loading = isLoading(databaseId);
+  const error = errors[databaseId];
 
   if (!databaseId) {
     return (
@@ -65,14 +45,14 @@ export function TableSelector() {
       <div className="p-4 border border-dashed rounded-lg text-sm text-center flex flex-col items-center gap-2">
         <Database className="h-6 w-6 text-muted-foreground/50" />
         <p className="text-muted-foreground">
-          No schema found. Sync the database in Admin Settings.
+          {error || "No schema found. Sync the database in Admin Settings."}
         </p>
       </div>
     );
   }
 
   const filteredTables = tables.filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase()),
+    t.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (

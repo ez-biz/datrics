@@ -6,7 +6,6 @@ import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   Home,
-  FolderOpen,
   PlusCircle,
   Terminal,
   Settings,
@@ -16,6 +15,7 @@ import {
   FileQuestion,
   LayoutDashboard,
   Users,
+  FolderTree,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -31,6 +31,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/collections", label: "Collections", icon: FolderTree },
   { href: "/questions", label: "Questions", icon: FileQuestion },
   { href: "/dashboards", label: "Dashboards", icon: LayoutDashboard },
   { href: "/question/new", label: "New Question", icon: PlusCircle },

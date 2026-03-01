@@ -26,6 +26,10 @@ InsightBase (internally codenamed Datrics) is a premium, enterprise-grade busine
 - **Real-time Execution**: Cards auto-execute queries on load
 - **Flexible Layouts**: Resize and rearrange cards freely
 
+### Productivity
+- **Global Search**: Command palette (Ctrl+K / Cmd+K) to quickly find questions, dashboards, and tables
+- **Keyboard Shortcuts**: Navigate and control the app without leaving your keyboard
+
 ### Enterprise Features
 - **Role-Based Access Control**: Admin, Editor, and Viewer roles with granular permissions
 - **User Management**: Admin portal to create, edit, deactivate, and delete users
@@ -154,6 +158,7 @@ Navigate to [http://localhost:3000](http://localhost:3000) to view the applicati
 | `/api/dashboards/[id]` | GET, PUT, DELETE | Manage single dashboard |
 | `/api/dashboards/[id]/cards` | POST, PUT, DELETE | Manage dashboard cards |
 | `/api/activity` | GET | Get user activity log |
+| `/api/search` | GET | Search questions, dashboards, tables |
 | `/api/admin/users` | GET, POST | List/create users (Admin) |
 | `/api/admin/users/[id]` | GET, PUT, DELETE | Manage single user (Admin) |
 | `/api/admin/users/[id]/activity` | GET | Get user's activity history (Admin) |

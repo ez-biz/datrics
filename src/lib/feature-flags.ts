@@ -1,7 +1,7 @@
 export const FEATURES = {
   SQL_EDITOR: true,
   CHARTS: true,
-  DASHBOARDS: false,
+  DASHBOARDS: true,
   PUBLIC_SHARING: false,
   SCHEDULED_REPORTS: false,
   DATA_MODELS: false,

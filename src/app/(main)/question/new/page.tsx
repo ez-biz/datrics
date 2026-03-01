@@ -38,6 +38,8 @@ import { FilterBuilder } from "@/components/query/builder/FilterBuilder";
 import { SummarizeBuilder } from "@/components/query/builder/SummarizeBuilder";
 import { SortLimitBuilder } from "@/components/query/builder/SortLimitBuilder";
 import { ResultsTable } from "@/components/query/ResultsTable";
+import { QueryChart, VizSettings } from "@/components/query/QueryChart";
+import { SaveQuestionDialog } from "@/components/query/SaveQuestionDialog";
 
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -54,6 +56,8 @@ export default function NewQuestionPage() {
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [activeStep, setActiveStep] = useState<number>(0);
+  const [vizSettings, setVizSettings] = useState<VizSettings>({ chartType: "table" });
+  const [activeTab, setActiveTab] = useState<string>("results");
 
   // Fetch engine for syntax highlighting & generation
   useEffect(() => {
@@ -219,14 +223,13 @@ export default function NewQuestionPage() {
             <Play className="h-4 w-4" />
             {running ? "Running..." : "Run Query"}
           </Button>
-          <Button
-            variant="default"
-            disabled
-            className="gap-2 bg-indigo-600 hover:bg-indigo-700"
-          >
-            <Save className="h-4 w-4" />
-            Save (Soon)
-          </Button>
+          <SaveQuestionDialog
+            databaseId={store.databaseId}
+            queryDefinition={store.toAbstractQuery()}
+            type="QUERY_BUILDER"
+            vizSettings={vizSettings}
+            disabled={!store.sourceTable || !result}
+          />
         </div>
       </div>
 
@@ -308,14 +311,17 @@ export default function NewQuestionPage() {
 
         {/* Right Content: Preview & Results */}
         <div className="flex-1 flex flex-col bg-muted/10 overflow-hidden">
-          <Tabs defaultValue="results" className="flex-1 flex flex-col h-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
             <div className="px-6 py-3 border-b bg-background flex items-center justify-between">
               <TabsList className="h-9">
                 <TabsTrigger value="results" className="text-xs px-4">
-                  Results
+                  Table
+                </TabsTrigger>
+                <TabsTrigger value="chart" className="text-xs px-4">
+                  Chart
                 </TabsTrigger>
                 <TabsTrigger value="sql" className="text-xs px-4 gap-2">
-                  <Code2 className="h-3 w-3" /> View SQL
+                  <Code2 className="h-3 w-3" /> SQL
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -369,6 +375,45 @@ export default function NewQuestionPage() {
                       truncated={result.truncated}
                     />
                   </div>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent
+              value="chart"
+              className="flex-1 m-0 p-6 overflow-hidden flex flex-col"
+            >
+              {!result && !error && !running && (
+                <div className="flex-1 border-2 border-dashed rounded-xl flex items-center justify-center text-center p-8 bg-background/50">
+                  <div className="max-w-sm">
+                    <div className="h-12 w-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mx-auto mb-4">
+                      <Play className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1">No data to visualize</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Run a query first to see chart visualization options.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {running && (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    Loading chart...
+                  </div>
+                </div>
+              )}
+
+              {result && !running && (
+                <Card className="flex-1 flex flex-col overflow-hidden shadow-sm border-muted p-4">
+                  <QueryChart
+                    columns={result.columns}
+                    rows={result.rows}
+                    vizSettings={vizSettings}
+                    onVizSettingsChange={setVizSettings}
+                  />
                 </Card>
               )}
             </TabsContent>

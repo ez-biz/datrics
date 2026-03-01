@@ -18,6 +18,8 @@ InsightBase is a full-stack, self-hosted analytics and BI platform. Non-technica
 │  └───────────┘ └──────────┘ └─────────────────────┘ │
 ├─────────────────────────────────────────────────────┤
 │              API Layer (Next.js API Routes)          │
+│  /api/databases    /api/questions    /api/dashboards │
+│  /api/activity     /api/auth                         │
 ├─────────────────────────────────────────────────────┤
 │               Query Execution Engine                 │
 │  ┌───────────────────────────────────────────────┐   │
@@ -29,8 +31,8 @@ InsightBase is a full-stack, self-hosted analytics and BI platform. Non-technica
 │  Internal DB (SQLite/PG)  │  Connected Databases     │
 │  - Users, Permissions     │  - PostgreSQL             │
 │  - Saved Questions (AQR)  │  - MySQL                  │
-│  - Dashboards             │  - SQLite                 │
-│  - Activity Logs          │  - MSSQL                  │
+│  - Dashboards, Cards      │  - SQLite                 │
+│  - Activity Logs          │  - MSSQL (planned)        │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -38,20 +40,23 @@ InsightBase is a full-stack, self-hosted analytics and BI platform. Non-technica
 
 ## Tech Stack
 
-| Layer          | Technology              | Version  | Notes                                |
-| -------------- | ----------------------- | -------- | ------------------------------------ |
-| Framework      | Next.js (App Router)    | 14+      | Server Components by default         |
-| Language       | TypeScript              | 5+       | Strict mode                          |
-| Styling        | Tailwind CSS            | 3+       | shadcn/ui (New York, Zinc, CSS vars) |
-| State          | Zustand                 | 4+       | Client components only               |
-| Charts         | Recharts                | 2+       | SVG-based, component API             |
-| Dashboard Grid | react-grid-layout       | 1.4+     | Drag, resize, responsive             |
-| SQL Editor     | @monaco-editor/react    | 4+       | Custom SQL autocomplete              |
-| Tables         | @tanstack/react-virtual | 3+       | Virtualized rendering                |
-| Auth           | next-auth (Auth.js v5)  | beta     | JWT sessions, Credentials provider   |
-| ORM            | Prisma                  | 5+       | SQLite (dev), PostgreSQL (prod)      |
-| Encryption     | Node.js crypto          | built-in | AES-256-GCM                          |
-| Font           | Inter                   | —        | Google Fonts                         |
+| Layer | Technology | Version | Notes |
+|-------|------------|---------|-------|
+| Framework | Next.js (App Router) | 16.1.6 | Server Components by default |
+| Language | TypeScript | 5+ | Strict mode |
+| Styling | Tailwind CSS | 4.0 | shadcn/ui (New York preset) |
+| Animations | Framer Motion | 12.34.3 | Smooth UI transitions |
+| State | Zustand | 5.0.11 | Client components only |
+| Forms | React Hook Form + Zod | 7.71+ / 4.3+ | Type-safe validation |
+| Charts | Recharts | 3.7.0 | SVG-based, component API |
+| Dashboard Grid | react-grid-layout | 2.2.2 | Drag, resize, responsive |
+| SQL Editor | @monaco-editor/react | 4.7.0 | VS Code editor in browser |
+| Tables | @tanstack/react-virtual | 3.13+ | Virtualized rendering |
+| Auth | next-auth (Auth.js v5) | 5.0.0-beta | JWT sessions, Credentials provider |
+| ORM | Prisma | 7.4.1 | SQLite (dev), PostgreSQL (prod) |
+| Encryption | Node.js crypto | built-in | AES-256-GCM |
+| Date Utils | date-fns | 4.1.0 | Lightweight date manipulation |
+| Icons | Lucide React | 0.575.0 | Modern icon set |
 
 ---
 
@@ -63,7 +68,7 @@ InsightBase is a full-stack, self-hosted analytics and BI platform. Non-technica
 4. **Encrypt all secrets.** Database passwords use AES-256-GCM. Never store plaintext. Key from `ENCRYPTION_KEY` env var.
 5. **Server does heavy lifting.** The database handles aggregation/filtering. Browser only renders the result (max 2000 rows).
 6. **Stateless API.** Next.js API routes + JWT = horizontally scalable. No server-side session stores.
-7. **Never commit to main.** Use `feature/<phase>-<name>` branches. Merge only via PR.
+7. **Activity tracking.** Log all significant user actions for audit and recent activity features.
 
 ---
 
@@ -78,15 +83,15 @@ InsightBase is a full-stack, self-hosted analytics and BI platform. Non-technica
 - LLMs can target the AQR schema for natural-language-to-query (Phase 7).
 - The SQL Generator can be unit-tested independently of the frontend.
 
-### ADR-002: react-grid-layout over @dnd-kit alone for dashboards
+### ADR-002: react-grid-layout for dashboards
 
-**Decision:** Use `react-grid-layout` for the dashboard grid, supplemented by `@dnd-kit` for drag-from-sidebar interactions.
+**Decision:** Use `react-grid-layout` for the dashboard grid.
 **Rationale:** RGL has built-in drag, resize, responsive breakpoints, and serializable layouts — all critical for dashboards.
 
 ### ADR-003: SQLite as default internal database
 
 **Decision:** Ship with SQLite for zero-config setup. Support PostgreSQL via Prisma provider swap.
-**Rationale:** Open-source users need `docker compose up` to work instantly. Enterprise users swap to PG for scale.
+**Rationale:** Open-source users need instant setup. Enterprise users swap to PG for scale.
 
 ### ADR-004: Auth.js v5 (beta) over v4
 
@@ -98,6 +103,11 @@ InsightBase is a full-stack, self-hosted analytics and BI platform. Non-technica
 **Decision:** When AI features land (Phase 7), LLMs will generate AQR JSON, not raw SQL.
 **Rationale:** Safety (no SQL injection), portability (AQR is dialect-agnostic), and validation (AQR has a strict TypeScript schema).
 
+### ADR-006: Recharts for visualization
+
+**Decision:** Use Recharts for all chart rendering.
+**Rationale:** React-native components, good TypeScript support, active maintenance, and covers all required chart types.
+
 ---
 
 ## Feature Flag Registry
@@ -105,10 +115,10 @@ InsightBase is a full-stack, self-hosted analytics and BI platform. Non-technica
 ```typescript
 // src/lib/feature-flags.ts
 export const FEATURES = {
-  SQL_EDITOR: true,
-  CHARTS: true,
-  DASHBOARDS: false,
-  PUBLIC_SHARING: false,
+  SQL_EDITOR: true,       // Raw SQL editor
+  CHARTS: true,           // Chart visualizations
+  DASHBOARDS: true,       // Dashboard builder
+  PUBLIC_SHARING: false,  // Public dashboard links
   SCHEDULED_REPORTS: false,
   DATA_MODELS: false,
   ROW_LEVEL_SECURITY: false,
@@ -117,6 +127,62 @@ export const FEATURES = {
 ```
 
 Update this registry as phases ship.
+
+---
+
+## API Structure
+
+```
+/api
+├── auth/
+│   ├── [...nextauth]/route.ts    # Auth.js handler
+│   └── signup/route.ts           # User registration
+├── databases/
+│   ├── route.ts                  # List/create connections
+│   ├── test/route.ts             # Test connection
+│   └── [id]/
+│       ├── route.ts              # Get/update/delete connection
+│       ├── sync/route.ts         # Schema introspection
+│       └── query/route.ts        # Execute queries
+├── questions/
+│   ├── route.ts                  # List/create questions
+│   ├── recent/route.ts           # Recently viewed
+│   └── [id]/
+│       ├── route.ts              # Get/update/delete question
+│       └── run/route.ts          # Execute question
+├── dashboards/
+│   ├── route.ts                  # List/create dashboards
+│   └── [id]/
+│       ├── route.ts              # Get/update/delete dashboard
+│       └── cards/route.ts        # Manage dashboard cards
+└── activity/
+    └── route.ts                  # User activity log
+```
+
+---
+
+## Data Models
+
+### Core Entities
+
+| Model | Purpose |
+|-------|---------|
+| User | Authentication, roles (ADMIN/VIEWER) |
+| DatabaseConnection | External data sources with encrypted credentials |
+| Question | Saved queries (AQR or raw SQL) with viz settings |
+| Dashboard | Grid-based collections of cards |
+| DashboardCard | Links questions to dashboards with layout info |
+| Collection | Hierarchical organization (future) |
+| Activity | Audit log of user actions |
+| Permission | Role-based access control (future) |
+
+### Key Relationships
+
+- User → Questions (creator)
+- User → Dashboards (creator)
+- Question → DashboardCards (many-to-many via cards)
+- Dashboard → DashboardCards (one-to-many, cascade delete)
+- Collection → Questions/Dashboards (optional organization)
 
 ---
 
@@ -130,39 +196,67 @@ Update this registry as phases ship.
 
 ---
 
-## Conventions
-
-### File Structure
+## File Structure
 
 ```
 src/
-├── app/               # Next.js App Router pages
-│   ├── (auth)/        # Login, signup, setup (no sidebar)
-│   ├── (main)/        # Authenticated pages (with sidebar)
-│   └── api/           # API routes
+├── app/                    # Next.js App Router pages
+│   ├── (auth)/             # Login, signup (no sidebar)
+│   ├── (main)/             # Authenticated pages (with sidebar)
+│   │   ├── page.tsx        # Home dashboard
+│   │   ├── questions/      # Questions listing
+│   │   ├── question/       # Question builder & viewer
+│   │   ├── dashboards/     # Dashboards listing
+│   │   ├── dashboard/      # Dashboard viewer
+│   │   ├── sql/            # SQL editor
+│   │   └── admin/          # Admin pages
+│   └── api/                # API routes
 ├── components/
-│   ├── ui/            # shadcn/ui primitives
-│   ├── layout/        # Sidebar, Topbar, AppShell
-│   ├── query-builder/ # Query builder step components
-│   ├── sql-editor/    # Monaco wrapper
-│   ├── visualization/ # Charts, DataTable, KPI
-│   ├── dashboard/     # Grid, Card, FilterBar
-│   └── shared/        # Modals, pickers, common UI
+│   ├── ui/                 # shadcn/ui primitives (37 components)
+│   ├── layout/             # Sidebar, Topbar
+│   ├── providers/          # Auth, Theme providers
+│   ├── admin/              # Database form
+│   ├── dashboard/          # Home dashboard components
+│   └── query/              # Query builder, charts, results
+│       ├── builder/        # Step components
+│       ├── QueryChart.tsx  # Visualization component
+│       ├── ResultsTable.tsx
+│       ├── SaveQuestionDialog.tsx
+│       ├── SchemaExplorer.tsx
+│       └── SqlEditor.tsx
 ├── lib/
-│   ├── auth.ts        # Auth.js config
-│   ├── db.ts          # Prisma singleton
-│   ├── encryption.ts  # AES-256-GCM
+│   ├── auth.ts             # Auth.js config
+│   ├── db.ts               # Prisma singleton
+│   ├── encryption.ts       # AES-256-GCM
 │   ├── feature-flags.ts
-│   ├── query-engine/  # AQR types, SQL gen, pool, introspection
-│   ├── ai/            # Reserved for Phase 7
-│   └── utils/
-├── stores/            # Zustand stores
-└── types/             # Shared TypeScript types
+│   ├── utils.ts
+│   └── query-engine/       # Core query execution
+│       ├── types.ts        # AQR types
+│       ├── sql-generator.ts
+│       ├── query-executor.ts
+│       ├── connection-pool.ts
+│       └── schema-builder.ts
+├── stores/
+│   └── query-builder-store.ts  # Zustand state
+├── hooks/
+│   └── use-mobile.ts
+└── types/                  # Shared TypeScript types
 ```
+
+---
+
+## Conventions
 
 ### Naming
 
 - **Components:** PascalCase (`QueryBuilderWizard.tsx`)
 - **Utils/libs:** camelCase (`sqlGenerator.ts`)
-- **API routes:** kebab-case folders (`/api/database/[id]/test/route.ts`)
+- **API routes:** kebab-case folders (`/api/databases/[id]/query/route.ts`)
 - **CSS:** Tailwind utilities + CSS variables for theming
+
+### Code Style
+
+- ESLint + Prettier for consistency
+- Strict TypeScript (no `any` without explicit comment)
+- Zod for runtime validation on all API inputs
+- Server components by default, `"use client"` only when needed

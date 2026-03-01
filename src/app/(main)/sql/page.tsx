@@ -9,6 +9,8 @@ import {
   Code2,
   PanelLeftClose,
   PanelLeft,
+  BarChart3,
+  Table,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,9 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SqlEditor } from "@/components/query/SqlEditor";
 import { ResultsTable } from "@/components/query/ResultsTable";
 import { SchemaExplorer } from "@/components/query/SchemaExplorer";
+import { QueryChart, VizSettings } from "@/components/query/QueryChart";
+import { SaveQuestionDialog } from "@/components/query/SaveQuestionDialog";
 
 interface DatabaseOption {
   id: string;
@@ -60,6 +65,8 @@ export default function SqlPlaygroundPage() {
   const [running, setRunning] = useState(false);
   const [loadingSchema, setLoadingSchema] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("table");
+  const [vizSettings, setVizSettings] = useState<VizSettings>({ chartType: "table" });
   const sqlRef = useRef(sql);
   sqlRef.current = sql;
 
@@ -202,6 +209,14 @@ export default function SqlPlaygroundPage() {
           </kbd>
         </Button>
 
+        <SaveQuestionDialog
+          databaseId={selectedDbId}
+          queryDefinition={{ sql }}
+          type="NATIVE_SQL"
+          vizSettings={vizSettings}
+          disabled={!selectedDbId || !result}
+        />
+
         <Button
           variant="ghost"
           size="icon"
@@ -256,8 +271,43 @@ export default function SqlPlaygroundPage() {
             />
           </div>
 
-          {/* Results area */}
-          <div className="flex-1 overflow-auto px-4 pb-4">
+          {/* Results area with tabs */}
+          <div className="flex-1 overflow-hidden flex flex-col px-4 pb-4">
+            {result && (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                <TabsList className="h-8 w-fit">
+                  <TabsTrigger value="table" className="text-xs gap-1.5">
+                    <Table className="h-3 w-3" />
+                    Table
+                  </TabsTrigger>
+                  <TabsTrigger value="chart" className="text-xs gap-1.5">
+                    <BarChart3 className="h-3 w-3" />
+                    Chart
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="table" className="flex-1 overflow-auto mt-2">
+                  <ResultsTable
+                    columns={result.columns}
+                    rows={result.rows}
+                    rowCount={result.rowCount}
+                    executionTimeMs={result.executionTimeMs}
+                    truncated={result.truncated}
+                    sql={result.sql}
+                  />
+                </TabsContent>
+
+                <TabsContent value="chart" className="flex-1 overflow-auto mt-2">
+                  <QueryChart
+                    columns={result.columns}
+                    rows={result.rows}
+                    vizSettings={vizSettings}
+                    onVizSettingsChange={setVizSettings}
+                  />
+                </TabsContent>
+              </Tabs>
+            )}
+
             {error && (
               <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4 text-sm text-destructive">
                 <p className="font-medium mb-1">Query Error</p>
@@ -265,17 +315,6 @@ export default function SqlPlaygroundPage() {
                   {error}
                 </pre>
               </div>
-            )}
-
-            {result && (
-              <ResultsTable
-                columns={result.columns}
-                rows={result.rows}
-                rowCount={result.rowCount}
-                executionTimeMs={result.executionTimeMs}
-                truncated={result.truncated}
-                sql={result.sql}
-              />
             )}
 
             {!result && !error && !running && (

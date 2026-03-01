@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { Logo } from "@/components/ui/logo";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -85,6 +86,13 @@ export function AppSidebar() {
       </div>
 
       <Separator />
+
+      {/* Search */}
+      {!collapsed && (
+        <div className="p-2">
+          <GlobalSearch />
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-1">

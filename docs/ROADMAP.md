@@ -147,7 +147,7 @@
 - [x] Home page with recently viewed questions
 - [x] Activity feed API
 - [ ] Collections (hierarchical folders, breadcrumbs, permissions)
-- [ ] Global search (Ctrl+K) across questions, dashboards, tables
+- [x] Global search (Ctrl+K) across questions, dashboards, tables
 - [ ] User management (invite, roles: Admin/Editor/Viewer, groups)
 - [ ] Permission model (database-level, collection-level)
 - [ ] Keyboard shortcuts reference (`?` to show)

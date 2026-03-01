@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -233,24 +233,26 @@ export default function CollectionsPage() {
             </BreadcrumbLink>
           </BreadcrumbItem>
           {breadcrumbs.map((crumb, index) => (
-            <BreadcrumbItem key={crumb.id}>
+            <Fragment key={crumb.id}>
               <BreadcrumbSeparator>
                 <ChevronRight className="h-4 w-4" />
               </BreadcrumbSeparator>
-              {index === breadcrumbs.length - 1 ? (
-                <BreadcrumbPage>{crumb.name}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink
-                  href={`/collections?parent=${crumb.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateToCollection(crumb.id);
-                  }}
-                >
-                  {crumb.name}
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
+              <BreadcrumbItem>
+                {index === breadcrumbs.length - 1 ? (
+                  <BreadcrumbPage>{crumb.name}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink
+                    href={`/collections?parent=${crumb.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigateToCollection(crumb.id);
+                    }}
+                  >
+                    {crumb.name}
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
           ))}
         </BreadcrumbList>
       </Breadcrumb>

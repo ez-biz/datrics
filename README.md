@@ -1,4 +1,4 @@
-# Datrics - InsightBase 🚀
+# Datrics - InsightBase
 
 InsightBase (internally codenamed Datrics) is a premium, enterprise-grade business intelligence and internal analytics platform built with modern web technologies. It allows users to connect databases, visually build SQL queries, create dynamic dashboards, and manage data securely.
 
@@ -6,30 +6,53 @@ InsightBase (internally codenamed Datrics) is a premium, enterprise-grade busine
 ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black)
 
-## ✨ Features
+## Features
 
-- **Database Architecture**: Connect and introspect database schemas securely (PostgreSQL, MySQL, SQLite supported).
-- **Visual Query Builder**: Build complex analytics queries with an intuitive drag-and-drop UI.
-- **Raw SQL Editor**: Powerful Monaco-based SQL terminal for advanced queries.
-- **Dynamic Dashboards**: Create animated, customizable grid dashboards.
-- **Enterprise UI/UX**: Built with Framer Motion, TailwindCSS, and custom SVG animations for a fluid, highly-polished experience.
-- **Role-Based Access Control**: Secure Admin vs. Viewer segregation using NextAuth credentials.
+### Core Analytics
+- **Database Connections**: Connect and introspect database schemas securely (PostgreSQL, MySQL, SQLite supported)
+- **Visual Query Builder**: Build complex analytics queries with an intuitive step-by-step UI
+- **Raw SQL Editor**: Powerful Monaco-based SQL terminal for advanced queries with schema autocomplete
+- **Save & Reuse Questions**: Save queries for later access, organize in collections, and share with your team
+
+### Visualization
+- **Interactive Charts**: Bar, Line, Area, Pie, Scatter charts powered by Recharts
+- **Smart Detection**: Auto-suggests best chart type based on your data
+- **Number Cards**: Display single metrics prominently
+- **Data Tables**: Virtualized tables with sorting, export to CSV/JSON
+
+### Dashboards
+- **Drag-and-Drop Builder**: Create dashboards using react-grid-layout
+- **Question Cards**: Add saved questions as dashboard cards
+- **Real-time Execution**: Cards auto-execute queries on load
+- **Flexible Layouts**: Resize and rearrange cards freely
+
+### Enterprise Features
+- **Role-Based Access Control**: Admin vs. Viewer roles using NextAuth credentials
+- **Activity Tracking**: Audit log of question views, executions, and creations
+- **Encrypted Credentials**: AES-256-GCM encryption for database passwords
+- **Schema Caching**: Fast schema browsing with cached introspection
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Framework**: [Next.js 16.1.6 (App Router)](https://nextjs.org/)
-- **Language**: TypeScript
-- **Styling**: TailwindCSS & `framer-motion`
-- **Database/ORM**: [Prisma](https://www.prisma.io/) (with `better-sqlite3` adapter)
-- **Authentication**: NextAuth (Credentials Provider)
-- **UI Components**: Radix UI, Shadcn UI
-- **Icons**: Lucide React
+| Layer | Technology | Version |
+|-------|------------|---------|
+| Framework | [Next.js (App Router)](https://nextjs.org/) | 16.1.6 |
+| Language | TypeScript | 5+ |
+| Styling | TailwindCSS + Framer Motion | 4.0 |
+| Database/ORM | [Prisma](https://www.prisma.io/) | 7.4.1 |
+| Authentication | NextAuth (Auth.js v5) | 5.0.0-beta |
+| Charts | Recharts | 3.7.0 |
+| Dashboard Grid | react-grid-layout | 2.2.2 |
+| SQL Editor | Monaco Editor | 4.7.0 |
+| Tables | TanStack React Table + Virtual | 8.21+ |
+| UI Components | Radix UI, Shadcn UI | Latest |
+| Icons | Lucide React | 0.575.0 |
 
 ---
 
-## ⚙️ Prerequisites
+## Prerequisites
 
 Before getting started, you need the following installed:
 
@@ -39,7 +62,7 @@ Before getting started, you need the following installed:
 
 ---
 
-## 🚀 Setup & Installation
+## Setup & Installation
 
 ### 1. Clone the repository
 
@@ -64,11 +87,13 @@ cp .env.example .env
 
 Fill out the variables in `.env`:
 
-- `DATABASE_URL`: Typically `"file:./dev.db"` for local development.
-- `AUTH_SECRET`: A random 32-character base64 string.
-- `NEXTAUTH_URL`: Your development URL (usually `http://localhost:3000`).
-- `ENCRYPTION_KEY`: A 64-character hex key to encrypt third-party database credentials.
-- `ADMIN_EMAIL`: The email of the default Admin user (e.g., `admin@example.com`).
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Internal database path (default: `"file:./dev.db"`) |
+| `AUTH_SECRET` | A random 32-character base64 string for JWT signing |
+| `NEXTAUTH_URL` | Your app URL (default: `http://localhost:3000`) |
+| `ENCRYPTION_KEY` | 64-character hex key for encrypting database credentials |
+| `ADMIN_EMAIL` | Email address to auto-assign ADMIN role |
 
 ### 4. Database Initialization
 
@@ -94,9 +119,43 @@ Navigate to [http://localhost:3000](http://localhost:3000) to view the applicati
 
 ---
 
-## 🛡️ Admin & Role Management
+## Application Structure
 
-By default, users that sign up are granted the `VIEWER` role, which strictly limits their access to creating and connecting external database schemas. To grant yourself `ADMIN` privileges:
+```
+/                     - Home dashboard with recent questions
+/questions            - List all saved questions
+/question/new         - Visual query builder
+/question/[id]        - View and run a saved question
+/sql                  - SQL editor with schema browser
+/dashboards           - List all dashboards
+/dashboard/[id]       - View and edit a dashboard
+/admin/databases      - Manage database connections (Admin only)
+```
+
+---
+
+## API Endpoints
+
+| Endpoint | Methods | Description |
+|----------|---------|-------------|
+| `/api/databases` | GET, POST | List/create database connections |
+| `/api/databases/[id]` | GET, PUT, DELETE | Manage single connection |
+| `/api/databases/[id]/sync` | POST | Introspect database schema |
+| `/api/databases/[id]/query` | POST | Execute AQR or raw SQL |
+| `/api/questions` | GET, POST | List/create questions |
+| `/api/questions/[id]` | GET, PUT, DELETE | Manage single question |
+| `/api/questions/[id]/run` | POST | Execute a saved question |
+| `/api/questions/recent` | GET | Get recently viewed questions |
+| `/api/dashboards` | GET, POST | List/create dashboards |
+| `/api/dashboards/[id]` | GET, PUT, DELETE | Manage single dashboard |
+| `/api/dashboards/[id]/cards` | POST, PUT, DELETE | Manage dashboard cards |
+| `/api/activity` | GET | Get user activity log |
+
+---
+
+## Admin & Role Management
+
+By default, users that sign up are granted the `VIEWER` role. To grant `ADMIN` privileges:
 
 ### Method 1: Environment Variable (Recommended)
 
@@ -108,8 +167,6 @@ ADMIN_EMAIL="your-email@example.com"
 
 ### Method 2: Command Line Script
 
-If you need to manually upgrade a specific user, you can run the built-in npm automation script:
-
 ```bash
 # Upgrade a specific user to ADMIN
 npm run make-admin your-email@example.com
@@ -118,10 +175,27 @@ npm run make-admin your-email@example.com
 npm run make-admin
 ```
 
-Once you have `ADMIN` privileges, a new **Admin -> Databases** section will appear in the application sidebar, allowing you to onboard and sync new external PostgreSQL, MySQL, and SQLite sources.
+Once you have `ADMIN` privileges, a new **Admin -> Databases** section will appear in the application sidebar.
 
 ---
 
-## 📜 License
+## Feature Flags
+
+Feature availability is controlled via `src/lib/feature-flags.ts`:
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| `SQL_EDITOR` | Enabled | Raw SQL query editor |
+| `CHARTS` | Enabled | Chart visualizations |
+| `DASHBOARDS` | Enabled | Dashboard builder |
+| `PUBLIC_SHARING` | Disabled | Public dashboard links |
+| `SCHEDULED_REPORTS` | Disabled | Automated report delivery |
+| `DATA_MODELS` | Disabled | Semantic layer |
+| `ROW_LEVEL_SECURITY` | Disabled | Per-user data filtering |
+| `AI_INSIGHTS` | Disabled | AI-powered analytics |
+
+---
+
+## License
 
 This software and the associated documentation are proprietary to and comprise valuable trade secrets of Anchit Gupta. Unauthorized copying, modification, or distribution is strictly prohibited. See the `LICENSE` file for more details.

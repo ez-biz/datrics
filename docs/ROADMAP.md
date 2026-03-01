@@ -8,125 +8,145 @@
 
 ---
 
-## Phase 1: Foundation (Alpha)
+## Phase 1: Foundation (Alpha) - COMPLETE
 
 ### 1.0 Project Setup
 
-- [ ] Initialize Next.js 14 with TypeScript, Tailwind CSS, shadcn/ui
-- [ ] Set up Prisma with SQLite + full schema (all models)
-- [ ] Configure Git repo + `feature/insightbase-foundation` branch
+- [x] Initialize Next.js 16 with TypeScript, Tailwind CSS, shadcn/ui
+- [x] Set up Prisma with SQLite + full schema (all models)
+- [x] Configure Git repo + feature branches
+- [x] Set up `.env.example` with all config variables
 - [ ] Create Docker + docker-compose setup
-- [ ] Set up `.env.example` with all config variables
 
 ### 1.1 Authentication
 
-- [ ] Auth.js v5 (next-auth@beta) with Credentials provider
-- [ ] Login & signup pages (shadcn Card + Form + zod validation)
-- [ ] First-user setup flow (auto-admin)
-- [ ] JWT session management + middleware route protection
+- [x] Auth.js v5 (next-auth@beta) with Credentials provider
+- [x] Login & signup pages (shadcn Card + Form + zod validation)
+- [x] First-user setup flow (auto-admin via ADMIN_EMAIL)
+- [x] JWT session management + middleware route protection
 - [ ] Rate limiting on login endpoint
 
 ### 1.2 App Shell Layout
 
-- [ ] Sidebar navigation (Home, Collections, New Question, SQL Editor, Settings)
-- [ ] Top bar (user avatar, search trigger, notifications, theme toggle)
-- [ ] Responsive design (collapsible sidebar on tablet, hamburger on mobile)
-- [ ] Dark/light theme with CSS variables
-- [ ] Loading skeletons and empty states baked in from the start
+- [x] Sidebar navigation (Home, Questions, Dashboards, New Question, SQL Editor, Admin)
+- [x] Top bar (user avatar, theme toggle)
+- [x] Responsive design (collapsible sidebar)
+- [x] Dark/light theme with CSS variables
+- [x] Loading skeletons and empty states
 
 ### 1.3 Database Connection Management
 
-- [ ] Admin Settings → Database Connections page
-- [ ] Connection form (name, type, host, port, db, user, password, SSL)
-- [ ] AES-256-GCM encryption for stored passwords
-- [ ] "Test Connection" button with success/error feedback
-- [ ] Schema introspection (tables, columns, PKs, FKs)
-- [ ] Store schema cache as JSON in internal DB
-- [ ] "Sync Schema" button to refresh
+- [x] Admin Settings → Database Connections page
+- [x] Connection form (name, type, host, port, db, user, password, SSL)
+- [x] AES-256-GCM encryption for stored passwords
+- [x] "Test Connection" button with success/error feedback
+- [x] Schema introspection (tables, columns, PKs)
+- [x] Store schema cache as JSON in internal DB
+- [x] "Sync Schema" button to refresh
 
 ### 1.4 Schema Browser
 
-- [ ] Tree-view: Database → Tables → Columns
-- [ ] Click table → column details + sample data (first 10 rows)
+- [x] Tree-view: Database → Tables → Columns
+- [x] Click table/column to insert in SQL editor
+- [ ] Click table → sample data (first 10 rows)
 - [ ] Foreign key relationship indicators
-- [ ] Search/filter across tables and columns
+- [x] Search/filter across tables
 
 ---
 
-## Phase 2: Query Engine & Builder (Beta)
+## Phase 2: Query Engine & Builder (Beta) - COMPLETE
 
 ### 2.1 Query Engine Core
 
-- [ ] Abstract Query Representation (AQR) TypeScript types
-- [ ] SQL Generator: pure function `(aqr, engine) => { sql, params }`
-- [ ] PostgreSQL and SQLite dialect support
-- [ ] Connection Pool Manager (lazy creation, timeout disposal)
-- [ ] Result Transformer (type-aware formatting)
+- [x] Abstract Query Representation (AQR) TypeScript types
+- [x] SQL Generator: pure function `(aqr, engine) => { sql, params }`
+- [x] PostgreSQL, MySQL, and SQLite dialect support
+- [x] Connection Pool Manager (lazy creation, timeout disposal)
+- [x] Result Transformer (type-aware formatting)
 
 ### 2.2 Visual Query Builder UI
 
-- [ ] Step 1: Table picker (search, filter)
-- [ ] Step 2: Column selector (checkboxes, type icons, related tables)
-- [ ] Step 3: Filter builder (type-aware operators, AND/OR groups)
-- [ ] Step 4: Summarize (group by, aggregations: Count/Sum/Avg/Min/Max)
-- [ ] Step 5: Sort & Limit
-- [ ] "View SQL" toggle to see generated query
+- [x] Step 1: Database picker (grid layout)
+- [x] Step 2: Table picker (search, filter)
+- [x] Step 3: Column selector (checkboxes, type icons)
+- [x] Step 4: Filter builder (type-aware operators, AND/OR groups)
+- [x] Step 5: Summarize (group by, aggregations: Count/Sum/Avg/Min/Max)
+- [x] Step 6: Sort & Limit
+- [x] "View SQL" toggle to see generated query
 
 ### 2.3 SQL Editor
 
-- [ ] Monaco Editor integration (`@monaco-editor/react`)
-- [ ] Syntax highlighting + autocomplete from cached schema
-- [ ] Run query (Ctrl+Enter)
+- [x] Monaco Editor integration (`@monaco-editor/react`)
+- [x] Syntax highlighting
+- [x] Run query (Ctrl+Enter)
+- [x] Schema explorer sidebar
+- [x] Save as Native Question
 - [ ] Query history (last 50 per user)
-- [ ] Save as Native Question
-- [ ] Keyboard shortcuts (Ctrl+Enter run, Ctrl+S save)
+- [ ] Autocomplete from cached schema
 
 ### 2.4 Results Table
 
-- [ ] Virtualized data table (`@tanstack/react-virtual`)
-- [ ] Column sorting & resizing
-- [ ] Cell formatting by type (numbers, dates, URLs)
-- [ ] Export to CSV and JSON
-- [ ] Pagination / infinite scroll
+- [x] Virtualized data table (`@tanstack/react-virtual`)
+- [x] Column sorting & resizing
+- [x] Cell formatting by type (numbers, dates, booleans)
+- [x] Export to CSV and JSON
+- [x] Row count and execution time display
+- [x] Truncation warning (2000 row limit)
 
 ---
 
-## Phase 3: Visualization (RC1)
+## Phase 3: Visualization (RC1) - COMPLETE
 
 ### 3.1 Chart Types
 
-- [ ] Bar Chart, Line Chart, Area Chart (Recharts)
-- [ ] Pie / Donut Chart
-- [ ] Number / KPI Card
-- [ ] Scatter Plot
-- [ ] Auto-visualization detection (suggest best chart type)
-- [ ] Chart settings panel (axes, colors, legend, goal lines)
+- [x] Bar Chart (Recharts)
+- [x] Line Chart
+- [x] Area Chart
+- [x] Pie / Donut Chart
+- [x] Number / KPI Card
+- [x] Scatter Plot
+- [x] Auto-visualization detection (suggest best chart type)
+- [x] Chart settings panel (axes selection)
+- [ ] Chart settings (colors, legend, goal lines)
 
 ### 3.2 Saving Questions
 
-- [ ] Save modal (name, description, collection picker)
-- [ ] Edit, duplicate, move, archive questions
+- [x] Save modal (name, description)
+- [x] Save from Query Builder
+- [x] Save from SQL Editor
+- [x] Questions listing page
+- [x] Question viewer page with auto-execution
+- [x] Delete questions
+- [x] Archive questions
+- [ ] Edit, duplicate, move questions
+- [ ] Collection picker in save modal
 
 ---
 
-## Phase 4: Dashboards (RC2)
+## Phase 4: Dashboards (RC2) - COMPLETE
 
-- [ ] Dashboard builder with `react-grid-layout`
-- [ ] Add saved questions as cards
+- [x] Dashboard builder with `react-grid-layout`
+- [x] Create new dashboard modal
+- [x] Add saved questions as cards
+- [x] Drag-and-drop resize/rearrange
+- [x] Remove cards
+- [x] Dashboard listing page
+- [x] Delete dashboards
+- [x] Activity tracking (views, runs)
 - [ ] Text / Markdown cards
 - [ ] Link cards
-- [ ] Dashboard filters (dropdowns, date pickers → linked to card params)
-- [ ] Drag-and-drop resize/rearrange
+- [ ] Dashboard filters (dropdowns, date pickers)
 - [ ] Share via public link (slug-based)
 - [ ] Full-screen presentation mode
 - [ ] Auto-refresh toggle
 
 ---
 
-## Phase 5: Organization & Polish (GA)
+## Phase 5: Organization & Polish (GA) - IN PROGRESS
 
+- [x] Home page with recently viewed questions
+- [x] Activity feed API
 - [ ] Collections (hierarchical folders, breadcrumbs, permissions)
-- [ ] Home page (recently viewed, pinned, popular, activity feed)
 - [ ] Global search (Ctrl+K) across questions, dashboards, tables
 - [ ] User management (invite, roles: Admin/Editor/Viewer, groups)
 - [ ] Permission model (database-level, collection-level)
@@ -144,7 +164,7 @@
 - [ ] Data Model Layer (friendly names, hidden columns, custom expressions)
 - [ ] REST API with API key auth (`/api/card/:id/query`, `/api/dataset`)
 - [ ] Rate limiting on API endpoints
-- [ ] Audit log (all CRUD, logins, query executions)
+- [ ] Audit log UI (all CRUD, logins, query executions)
 - [ ] PDF export for dashboards
 - [ ] Row-Level Security (RLS)
 

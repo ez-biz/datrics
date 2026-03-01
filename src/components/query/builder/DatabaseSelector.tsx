@@ -49,28 +49,26 @@ export function DatabaseSelector() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+    <div className="flex flex-col gap-2">
       {databases.map((db) => {
         const selected = db.id === databaseId;
         return (
           <Button
             key={db.id}
             variant={selected ? "default" : "outline"}
-            className={`h-auto p-4 flex flex-col items-start gap-1 justify-start relative ${
+            className={`h-auto p-3 flex items-center gap-3 justify-start w-full ${
               selected ? "ring-2 ring-primary ring-offset-1" : ""
             }`}
             onClick={() => setDatabaseId(db.id)}
           >
-            <div className="flex items-center gap-2 font-semibold w-full">
-              <Database className="h-4 w-4 shrink-0" />
-              <span className="truncate">{db.name}</span>
-              {selected && <Check className="h-4 w-4 ml-auto shrink-0" />}
+            <Database className="h-4 w-4 shrink-0" />
+            <div className="flex-1 min-w-0 text-left">
+              <div className="font-semibold truncate">{db.name}</div>
+              <div className="text-xs opacity-70 truncate">
+                {db.engine} • {db.databaseName}
+              </div>
             </div>
-            <div className="text-xs opacity-70 flex gap-2">
-              <span className="uppercase">{db.engine}</span>
-              <span>•</span>
-              <span className="truncate max-w-[120px]">{db.databaseName}</span>
-            </div>
+            {selected && <Check className="h-4 w-4 shrink-0 text-primary-foreground" />}
           </Button>
         );
       })}

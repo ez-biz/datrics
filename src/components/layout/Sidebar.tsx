@@ -13,6 +13,8 @@ import {
   LogOut,
   ChevronLeft,
   Menu,
+  FileQuestion,
+  LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -27,7 +29,8 @@ import { Logo } from "@/components/ui/logo";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/collection", label: "Collections", icon: FolderOpen },
+  { href: "/questions", label: "Questions", icon: FileQuestion },
+  { href: "/dashboards", label: "Dashboards", icon: LayoutDashboard },
   { href: "/question/new", label: "New Question", icon: PlusCircle },
   { href: "/sql", label: "SQL Editor", icon: Terminal },
 ];

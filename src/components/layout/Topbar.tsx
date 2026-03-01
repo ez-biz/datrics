@@ -8,13 +8,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { KeyboardShortcutsDialog } from "@/components/KeyboardShortcutsDialog";
+import { GlobalKeyboardHandler } from "@/components/GlobalKeyboardHandler";
 
 export function Topbar() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 gap-4">
-      {/* Search */}
+    <>
+      <GlobalKeyboardHandler />
+      <header className="sticky top-0 z-30 flex items-center h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 gap-4">
+        {/* Search */}
       <Button
         variant="outline"
         className="flex-1 max-w-md justify-start text-muted-foreground font-normal h-9"
@@ -31,6 +35,16 @@ export function Topbar() {
       </Button>
 
       <div className="flex items-center gap-1 ml-auto">
+        {/* Keyboard shortcuts */}
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div>
+              <KeyboardShortcutsDialog />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>Keyboard shortcuts (?)</TooltipContent>
+        </Tooltip>
+
         {/* Theme toggle */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
@@ -49,5 +63,6 @@ export function Topbar() {
         </Tooltip>
       </div>
     </header>
+    </>
   );
 }

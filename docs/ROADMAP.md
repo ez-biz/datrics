@@ -148,9 +148,9 @@
 - [x] Activity feed API
 - [x] Collections (hierarchical folders, breadcrumbs, permissions)
 - [x] Global search (Ctrl+K) across questions, dashboards, tables
-- [ ] User management (invite, roles: Admin/Editor/Viewer, groups)
-- [ ] Permission model (database-level, collection-level)
-- [ ] Keyboard shortcuts reference (`?` to show)
+- [x] User management (admin portal, roles: Admin/Editor/Viewer)
+- [x] Permission model (database-level access control)
+- [x] Keyboard shortcuts reference (`?` to show, navigation with G+key)
 - [ ] Onboarding tour for first-time users
 - [ ] Version history for questions/dashboards
 - [ ] Error handling UX polish (human-readable DB errors)

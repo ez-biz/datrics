@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { encrypt } from "@/lib/encryption";
-import { introspectSchema } from "@/lib/query-engine/schema-builder";
-import path from "path";
+import { initPlaygroundDatabase } from "@/lib/init-playground";
 import fs from "fs";
+import path from "path";
 
 const PLAYGROUND_NAME = "Sample Database (Playground)";
 
@@ -15,16 +14,7 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Idempotency: return existing playground if already created
-    const existing = await prisma.databaseConnection.findFirst({
-      where: { name: PLAYGROUND_NAME },
-      select: { id: true, name: true, engine: true },
-    });
-    if (existing) {
-      return NextResponse.json(existing);
-    }
-
-    // Resolve the playground.db path
+    // Check if playground.db file exists
     const dbPath = path.resolve(process.cwd(), "prisma/playground.db");
     if (!fs.existsSync(dbPath)) {
       return NextResponse.json(
@@ -33,38 +23,23 @@ export async function POST() {
       );
     }
 
-    // Create DatabaseConnection record
-    const db = await prisma.databaseConnection.create({
-      data: {
-        name: PLAYGROUND_NAME,
-        engine: "SQLITE",
-        host: "localhost",
-        port: 0,
-        databaseName: dbPath,
-        username: "playground",
-        passwordEnc: encrypt("playground"),
-        ssl: false,
-      },
+    // Initialize (idempotent)
+    await initPlaygroundDatabase();
+
+    // Return the record
+    const db = await prisma.databaseConnection.findFirst({
+      where: { name: PLAYGROUND_NAME },
+      select: { id: true, name: true, engine: true },
     });
 
-    // Run schema introspection and cache it
-    const schemaGraph = await introspectSchema({
-      engine: "SQLITE",
-      host: "localhost",
-      port: 0,
-      databaseName: dbPath,
-      password: "playground",
-    });
+    if (!db) {
+      return NextResponse.json(
+        { error: "Failed to create playground database" },
+        { status: 500 }
+      );
+    }
 
-    await prisma.databaseConnection.update({
-      where: { id: db.id },
-      data: {
-        schemaCache: JSON.stringify(schemaGraph),
-        lastSyncedAt: new Date(),
-      },
-    });
-
-    return NextResponse.json({ id: db.id, name: db.name, engine: db.engine });
+    return NextResponse.json(db);
   } catch (error: unknown) {
     console.error("Failed to create playground database:", error);
     return NextResponse.json(

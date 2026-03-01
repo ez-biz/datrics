@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Users,
   FolderTree,
+  BellRing,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -34,11 +35,13 @@ const navItems = [
   { href: "/questions", label: "Questions", icon: FileQuestion },
   { href: "/dashboards", label: "Dashboards", icon: LayoutDashboard },
   { href: "/question/new", label: "New Question", icon: PlusCircle },
+  { href: "/alerts", label: "Alerts", icon: BellRing },
 ];
 
 const adminItems = [
   { href: "/admin/databases", label: "Databases", icon: Settings },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppSidebar() {

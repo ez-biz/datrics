@@ -18,6 +18,8 @@ model User {
   dashboards          Dashboard[]
   activities          Activity[]
   databasePermissions DatabasePermission[]
+  alerts              Alert[]
+  notifications       Notification[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -84,6 +86,7 @@ model Question {
   creator         User              @relation(fields: [creatorId], references: [id])
   dashboardCards  DashboardCard[]
   versions        QuestionVersion[]
+  alerts          Alert[]
   cacheTTL        Int?              // seconds
   tags            String?           // JSON array
   verified        Boolean           @default(false)
@@ -167,6 +170,42 @@ model Activity {
 model Setting {
   key   String @id
   value String
+}
+
+model Alert {
+  id              String    @id @default(cuid())
+  name            String
+  questionId      String
+  question        Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  creatorId       String
+  creator         User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  valueSource     String    // "first_row_first_col", "row_count", or column name
+  operator        String    // "gt", "gte", "lt", "lte", "eq", "neq"
+  threshold       Float
+  enabled         Boolean   @default(true)
+  lastCheckedAt   DateTime?
+  lastTriggeredAt DateTime?
+  lastValue       Float?
+  notifyInApp     Boolean   @default(true)
+  notifyEmail     Boolean   @default(false)
+  notifySlack     Boolean   @default(false)
+  notifications   Notification[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alertId   String?
+  alert     Alert?   @relation(fields: [alertId], references: [id], onDelete: SetNull)
+  title     String
+  message   String
+  type      String   @default("alert") // "alert", "system", "info"
+  read      Boolean  @default(false)
+  metadata  String?  // JSON
+  createdAt DateTime @default(now())
 }
 
 model DatabasePermission {

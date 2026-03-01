@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import {
   Home,
   PlusCircle,
-  Terminal,
   Settings,
   LogOut,
   ChevronLeft,
@@ -35,7 +34,6 @@ const navItems = [
   { href: "/questions", label: "Questions", icon: FileQuestion },
   { href: "/dashboards", label: "Dashboards", icon: LayoutDashboard },
   { href: "/question/new", label: "New Question", icon: PlusCircle },
-  { href: "/sql", label: "SQL Editor", icon: Terminal },
 ];
 
 const adminItems = [

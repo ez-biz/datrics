@@ -14,6 +14,13 @@ import {
   X,
   Loader2,
   RefreshCw,
+  BarChart3,
+  LineChart as LineChartIcon,
+  AreaChart as AreaChartIcon,
+  PieChart as PieChartIcon,
+  ScatterChart as ScatterChartIcon,
+  Hash,
+  Table2,
 } from "lucide-react";
 import GridLayout from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -32,6 +39,16 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryChart, VizSettings } from "@/components/query/QueryChart";
 import { ResultsTable } from "@/components/query/ResultsTable";
+
+const CHART_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  table: Table2,
+  bar: BarChart3,
+  line: LineChartIcon,
+  area: AreaChartIcon,
+  pie: PieChartIcon,
+  scatter: ScatterChartIcon,
+  number: Hash,
+};
 
 interface DashboardCard {
   id: string;
@@ -378,9 +395,16 @@ export default function DashboardViewPage({
                               : "Query Builder"}
                           </p>
                         </div>
-                        <Badge variant="outline">
-                          {question.vizSettings?.chartType || "table"}
-                        </Badge>
+                        {(() => {
+                          const chartType = question.vizSettings?.chartType || "table";
+                          const Icon = CHART_ICON_MAP[chartType] || Table2;
+                          return (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Icon className="h-4 w-4" />
+                              <span className="text-xs capitalize">{chartType}</span>
+                            </div>
+                          );
+                        })()}
                       </button>
                     ))
                   )}
@@ -476,6 +500,7 @@ export default function DashboardViewPage({
                               rowCount={Math.min(result.data.rowCount, 10)}
                               executionTimeMs={result.data.executionTimeMs}
                               truncated={false}
+                              compact
                             />
                           </div>
                         ) : (
@@ -485,6 +510,7 @@ export default function DashboardViewPage({
                             vizSettings={
                               card.question?.vizSettings || { chartType: "bar" }
                             }
+                            hideControls
                           />
                         )
                       ) : (

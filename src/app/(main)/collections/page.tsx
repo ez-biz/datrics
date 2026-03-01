@@ -16,6 +16,7 @@ import {
   FolderInput,
   Search,
   Plus,
+  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,6 +217,17 @@ export default function CollectionsPage() {
               >
                 <FileQuestion className="mr-2 h-4 w-4" />
                 New Question
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const url = parentId
+                    ? `/question/new?mode=sql&collectionId=${parentId}`
+                    : "/question/new?mode=sql";
+                  router.push(url);
+                }}
+              >
+                <Terminal className="mr-2 h-4 w-4" />
+                New SQL Question
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {

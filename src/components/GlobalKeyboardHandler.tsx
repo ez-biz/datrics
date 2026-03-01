@@ -46,7 +46,7 @@ export function GlobalKeyboardHandler() {
             break;
           case "s":
             e.preventDefault();
-            router.push("/sql");
+            router.push("/question/new?mode=sql");
             break;
           case "n":
             e.preventDefault();

@@ -146,7 +146,7 @@
 
 - [x] Home page with recently viewed questions
 - [x] Activity feed API
-- [ ] Collections (hierarchical folders, breadcrumbs, permissions)
+- [x] Collections (hierarchical folders, breadcrumbs, permissions)
 - [x] Global search (Ctrl+K) across questions, dashboards, tables
 - [ ] User management (invite, roles: Admin/Editor/Viewer, groups)
 - [ ] Permission model (database-level, collection-level)

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Search,
@@ -61,10 +61,14 @@ interface Dashboard {
 
 export default function DashboardsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shouldOpenCreate = searchParams.get("new") === "true";
+  const collectionId = searchParams.get("collectionId");
+
   const [dashboards, setDashboards] = useState<Dashboard[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(shouldOpenCreate);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
@@ -72,6 +76,15 @@ export default function DashboardsPage() {
   useEffect(() => {
     fetchDashboards();
   }, []);
+
+  // Auto-open create dialog if new=true in URL
+  useEffect(() => {
+    if (shouldOpenCreate) {
+      setCreateOpen(true);
+      // Clear the URL params after opening
+      router.replace("/dashboards");
+    }
+  }, [shouldOpenCreate, router]);
 
   const fetchDashboards = async () => {
     try {
@@ -101,6 +114,7 @@ export default function DashboardsPage() {
         body: JSON.stringify({
           name: newName.trim(),
           description: newDescription.trim() || undefined,
+          collectionId: collectionId || undefined,
         }),
       });
 

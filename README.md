@@ -13,6 +13,7 @@ InsightBase (internally codenamed Datrics) is a premium, enterprise-grade busine
 - **Visual Query Builder**: Build complex analytics queries with an intuitive step-by-step UI
 - **Raw SQL Editor**: Powerful Monaco-based SQL terminal for advanced queries with schema autocomplete
 - **Save & Reuse Questions**: Save queries for later access, organize in collections, and share with your team
+- **Collections**: Organize questions and dashboards into hierarchical folders with breadcrumb navigation
 
 ### Visualization
 - **Interactive Charts**: Bar, Line, Area, Pie, Scatter charts powered by Recharts
@@ -136,6 +137,7 @@ Navigate to [http://localhost:3000](http://localhost:3000) to view the applicati
 /dashboards           - List all dashboards
 /dashboard/[id]       - View and edit a dashboard
 /admin/databases      - Manage database connections (Admin only)
+/collections          - Browse and organize content into folders
 /admin/users          - Manage users and permissions (Admin only)
 /admin/users/[id]     - User detail with permissions editor (Admin only)
 ```
@@ -158,6 +160,8 @@ Navigate to [http://localhost:3000](http://localhost:3000) to view the applicati
 | `/api/dashboards/[id]` | GET, PUT, DELETE | Manage single dashboard |
 | `/api/dashboards/[id]/cards` | POST, PUT, DELETE | Manage dashboard cards |
 | `/api/activity` | GET | Get user activity log |
+| `/api/collections` | GET, POST | List/create collections |
+| `/api/collections/[id]` | GET, PUT, DELETE | Manage single collection |
 | `/api/search` | GET | Search questions, dashboards, tables |
 | `/api/admin/users` | GET, POST | List/create users (Admin) |
 | `/api/admin/users/[id]` | GET, PUT, DELETE | Manage single user (Admin) |

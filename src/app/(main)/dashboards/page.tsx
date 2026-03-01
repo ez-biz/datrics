@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +14,10 @@ import {
   Lock,
   Clock,
   User,
+  FileStack,
+  Loader2,
+  AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -43,6 +47,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,6 +70,20 @@ interface Dashboard {
   updatedAt: string;
 }
 
+interface DashboardTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  icon: string;
+  cardCount: number;
+}
+
+interface Database {
+  id: string;
+  name: string;
+}
+
 export default function DashboardsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,6 +97,19 @@ export default function DashboardsPage() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
+
+  // Template dialog state
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [templates, setTemplates] = useState<DashboardTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<DashboardTemplate | null>(null);
+  const [databases, setDatabases] = useState<Database[]>([]);
+  const [databasesLoading, setDatabasesLoading] = useState(false);
+  const [databasesError, setDatabasesError] = useState<string | null>(null);
+  const [selectedDatabaseId, setSelectedDatabaseId] = useState("");
+  const [creatingFromTemplate, setCreatingFromTemplate] = useState(false);
 
   useEffect(() => {
     fetchDashboards();
@@ -150,6 +188,81 @@ export default function DashboardsPage() {
     }
   };
 
+  const fetchTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    setTemplatesError(null);
+    try {
+      const response = await fetch("/api/dashboards/templates");
+      if (!response.ok) throw new Error("Failed to fetch templates");
+      const data = await response.json();
+      setTemplates(data);
+    } catch (error) {
+      setTemplatesError("Failed to load templates. Please try again.");
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
+  const fetchDatabases = useCallback(async () => {
+    setDatabasesLoading(true);
+    setDatabasesError(null);
+    try {
+      const response = await fetch("/api/databases");
+      if (!response.ok) throw new Error("Failed to fetch databases");
+      const data = await response.json();
+      setDatabases(data);
+    } catch (error) {
+      setDatabasesError("Failed to load databases. Please try again.");
+    } finally {
+      setDatabasesLoading(false);
+    }
+  }, []);
+
+  const handleTemplateDialogOpen = (open: boolean) => {
+    setTemplateOpen(open);
+    if (open) {
+      fetchTemplates();
+    } else {
+      // Reset state on close
+      setSelectedTemplate(null);
+      setSelectedDatabaseId("");
+      setTemplatesError(null);
+      setDatabasesError(null);
+    }
+  };
+
+  const handleTemplateSelect = (template: DashboardTemplate) => {
+    setSelectedTemplate(template);
+    fetchDatabases();
+  };
+
+  const handleCreateFromTemplate = async () => {
+    if (!selectedTemplate || !selectedDatabaseId) return;
+
+    setCreatingFromTemplate(true);
+    try {
+      const response = await fetch("/api/dashboards/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: selectedTemplate.id,
+          databaseId: selectedDatabaseId,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to create dashboard");
+
+      const dashboard = await response.json();
+      toast.success("Dashboard created from template");
+      setTemplateOpen(false);
+      router.push(`/dashboard/${dashboard.id}`);
+    } catch (error) {
+      toast.error("Failed to create dashboard from template");
+    } finally {
+      setCreatingFromTemplate(false);
+    }
+  };
+
   const filteredDashboards = dashboards.filter(
     (d) =>
       d.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -166,13 +279,174 @@ export default function DashboardsPage() {
             Create and manage your dashboards
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Dashboard
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Dialog
+            open={templateOpen}
+            onOpenChange={handleTemplateDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <FileStack className="h-4 w-4" />
+                From Template
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+              {!selectedTemplate ? (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Create from Template</DialogTitle>
+                    <DialogDescription>
+                      Choose a template to quickly create a pre-built dashboard.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    {templatesLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : templatesError ? (
+                      <div className="flex flex-col items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
+                        <AlertCircle className="h-6 w-6" />
+                        <p>{templatesError}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchTemplates}
+                        >
+                          Retry
+                        </Button>
+                      </div>
+                    ) : templates.length === 0 ? (
+                      <p className="text-center text-sm text-muted-foreground py-8">
+                        No templates available.
+                      </p>
+                    ) : (
+                      <div className="grid gap-3 sm:grid-cols-2 max-h-[400px] overflow-y-auto pr-1">
+                        {templates.map((template) => (
+                          <Card
+                            key={template.id}
+                            className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
+                            onClick={() => handleTemplateSelect(template)}
+                          >
+                            <CardHeader className="pb-2">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm">
+                                  {template.name}
+                                </CardTitle>
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {template.category}
+                                </Badge>
+                              </div>
+                              <CardDescription className="text-xs line-clamp-2">
+                                {template.description}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <p className="text-xs text-muted-foreground">
+                                {template.cardCount} card
+                                {template.cardCount !== 1 ? "s" : ""}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => {
+                          setSelectedTemplate(null);
+                          setSelectedDatabaseId("");
+                        }}
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                      Select Database
+                    </DialogTitle>
+                    <DialogDescription>
+                      Choose a database for the &quot;{selectedTemplate.name}&quot; template.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 grid gap-4">
+                    {databasesLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : databasesError ? (
+                      <div className="flex flex-col items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
+                        <AlertCircle className="h-6 w-6" />
+                        <p>{databasesError}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchDatabases}
+                        >
+                          Retry
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid gap-2">
+                          <Label htmlFor="database">Database</Label>
+                          <Select
+                            value={selectedDatabaseId}
+                            onValueChange={setSelectedDatabaseId}
+                          >
+                            <SelectTrigger id="database">
+                              <SelectValue placeholder="Select a database" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {databases.map((db) => (
+                                <SelectItem key={db.id} value={db.id}>
+                                  {db.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setTemplateOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleCreateFromTemplate}
+                            disabled={!selectedDatabaseId || creatingFromTemplate}
+                          >
+                            {creatingFromTemplate ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Creating...
+                              </>
+                            ) : (
+                              "Create Dashboard"
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                New Dashboard
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Dashboard</DialogTitle>
@@ -213,6 +487,7 @@ export default function DashboardsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Search */}

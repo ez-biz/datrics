@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -37,6 +37,8 @@ import {
   AreaChart as AreaChartIcon,
   Hash,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import { ChartTypePicker } from "./ChartTypePicker";
 
 interface QueryColumn {
@@ -121,6 +123,33 @@ export function QueryChart({
 
   const settings = vizSettings || autoSettings;
   const [localSettings, setLocalSettings] = useState<VizSettings>(settings);
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  const exportChartPNG = useCallback(async () => {
+    if (!chartRef.current) return;
+    try {
+      const { default: html2canvas } = await import("html2canvas-pro");
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+      });
+      const link = document.createElement("a");
+      link.download = "chart.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch {
+      // Fallback: use SVG serialization
+      const svg = chartRef.current.querySelector("svg");
+      if (!svg) return;
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const blob = new Blob([svgData], { type: "image/svg+xml" });
+      const link = document.createElement("a");
+      link.download = "chart.svg";
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+  }, []);
 
   const updateSettings = (updates: Partial<VizSettings>) => {
     const newSettings = { ...localSettings, ...updates };
@@ -181,14 +210,20 @@ export function QueryChart({
   return (
     <div className="flex flex-col gap-4">
       {!hideControls && (
-        <ChartControls
-          columns={columns}
-          settings={localSettings}
-          onUpdate={updateSettings}
-        />
+        <div className="flex items-center justify-between">
+          <ChartControls
+            columns={columns}
+            settings={localSettings}
+            onUpdate={updateSettings}
+          />
+          <Button variant="outline" size="sm" onClick={exportChartPNG} className="shrink-0">
+            <Download className="h-3.5 w-3.5 mr-1" />
+            PNG
+          </Button>
+        </div>
       )}
 
-      <div className={hideControls ? "h-full w-full min-h-[200px]" : "h-[350px] w-full"}>
+      <div ref={chartRef} className={hideControls ? "h-full w-full min-h-[200px]" : "h-[350px] w-full"}>
         <ResponsiveContainer width="100%" height="100%">
           {localSettings.chartType === "bar" ? (
             <BarChart data={chartData}>

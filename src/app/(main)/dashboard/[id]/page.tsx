@@ -21,6 +21,9 @@ import {
   ScatterChart as ScatterChartIcon,
   Hash,
   Table2,
+  Share2,
+  Copy,
+  Check,
 } from "lucide-react";
 import GridLayout from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -37,8 +40,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { QueryChart, VizSettings } from "@/components/query/QueryChart";
 import { ResultsTable } from "@/components/query/ResultsTable";
+import { DashboardFilters, DashboardFilter } from "@/components/dashboard/DashboardFilters";
 
 const CHART_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   table: Table2,
@@ -73,6 +79,8 @@ interface Dashboard {
   description: string | null;
   isPublic: boolean;
   publicSlug: string | null;
+  embedToken: string | null;
+  filters: string | null;
   cards: DashboardCard[];
   creator: { id: string; name: string | null; email: string };
 }
@@ -106,6 +114,59 @@ export default function DashboardViewPage({
   );
   const [questions, setQuestions] = useState<Question[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [filters, setFilters] = useState<DashboardFilter[]>([]);
+
+  const handleFiltersChange = async (newFilters: DashboardFilter[]) => {
+    setFilters(newFilters);
+    // Persist filters to dashboard
+    try {
+      await fetch(`/api/dashboards/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters: JSON.stringify(newFilters) }),
+      });
+    } catch {
+      // Non-critical
+    }
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const toggleSharing = async () => {
+    if (!dashboard) return;
+    setShareLoading(true);
+    try {
+      const response = await fetch(`/api/dashboards/${id}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublic: !dashboard.isPublic }),
+      });
+      if (!response.ok) throw new Error("Failed to update sharing");
+      const data = await response.json();
+      setDashboard((prev) =>
+        prev
+          ? {
+              ...prev,
+              isPublic: data.isPublic,
+              publicSlug: data.publicSlug,
+              embedToken: data.embedToken,
+            }
+          : prev
+      );
+      toast.success(data.isPublic ? "Dashboard is now public" : "Dashboard is now private");
+    } catch (error) {
+      toast.error("Failed to update sharing settings");
+    } finally {
+      setShareLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchDashboard();
@@ -125,6 +186,15 @@ export default function DashboardViewPage({
       }
       const data = await response.json();
       setDashboard(data);
+
+      // Load saved filters
+      if (data.filters) {
+        try {
+          setFilters(JSON.parse(data.filters));
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
 
       // Fetch results for all question cards
       data.cards.forEach((card: DashboardCard) => {
@@ -353,6 +423,95 @@ export default function DashboardViewPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1">
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Share Dashboard</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="public-toggle" className="flex flex-col gap-1">
+                    <span>Public sharing</span>
+                    <span className="text-sm font-normal text-muted-foreground">
+                      Anyone with the link can view this dashboard
+                    </span>
+                  </Label>
+                  <Switch
+                    id="public-toggle"
+                    checked={dashboard.isPublic}
+                    onCheckedChange={toggleSharing}
+                    disabled={shareLoading}
+                  />
+                </div>
+
+                {dashboard.isPublic && dashboard.publicSlug && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Public URL</Label>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 rounded bg-muted px-3 py-2 text-sm break-all">
+                          {typeof window !== "undefined"
+                            ? `${window.location.origin}/public/dashboard/${dashboard.publicSlug}`
+                            : ""}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() =>
+                            copyToClipboard(
+                              `${window.location.origin}/public/dashboard/${dashboard.publicSlug}`,
+                              "url"
+                            )
+                          }
+                        >
+                          {copiedField === "url" ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {dashboard.embedToken && (
+                      <div className="space-y-2">
+                        <Label>Embed Code</Label>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 rounded bg-muted px-3 py-2 text-sm break-all">
+                            {`<iframe src="${typeof window !== "undefined" ? window.location.origin : ""}/embed/dashboard/${dashboard.embedToken}" width="100%" height="600" frameborder="0"></iframe>`}
+                          </code>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0"
+                            onClick={() =>
+                              copyToClipboard(
+                                `<iframe src="${window.location.origin}/embed/dashboard/${dashboard.embedToken}" width="100%" height="600" frameborder="0"></iframe>`,
+                                "embed"
+                              )
+                            }
+                          >
+                            {copiedField === "embed" ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button
             variant={editing ? "default" : "outline"}
             size="sm"
@@ -414,6 +573,17 @@ export default function DashboardViewPage({
           )}
         </div>
       </div>
+
+      {/* Dashboard Filters */}
+      {(filters.length > 0 || editing) && (
+        <div className="px-6 py-2 border-b bg-background">
+          <DashboardFilters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            editing={editing}
+          />
+        </div>
+      )}
 
       {/* Dashboard Content */}
       <div className="flex-1 p-6 overflow-auto bg-muted/20">

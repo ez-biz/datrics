@@ -87,6 +87,20 @@ async function main() {
     process.exit(1);
   }
 
+  // Step 7: Generate playground database if it doesn't exist
+  const playgroundPath = path.join(ROOT, "prisma", "playground.db");
+  if (!fs.existsSync(playgroundPath)) {
+    console.log("\n  Generating playground database...\n");
+    try {
+      execSync("npx tsx scripts/create-playground-db.ts", { cwd: ROOT, stdio: "inherit" });
+      console.log("  Playground database created");
+    } catch {
+      console.warn("  Warning: Failed to generate playground database. You can run 'npm run db:playground' manually.");
+    }
+  } else {
+    console.log("  Playground database already exists");
+  }
+
   // Success
   console.log("\n  ─────────────────────────");
   console.log("  Setup complete!\n");
@@ -94,7 +108,7 @@ async function main() {
   console.log("    1. npm run dev");
   console.log("    2. Open http://localhost:3000");
   console.log("    3. Sign up — the first user becomes admin automatically");
-  console.log("    4. Connect your first database from the onboarding wizard\n");
+  console.log("    4. The sample database is ready to explore, or connect your own\n");
 }
 
 main().catch((err) => {

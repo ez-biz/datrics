@@ -44,6 +44,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
   const [syncing, setSyncing] = useState(false);
   const [syncDone, setSyncDone] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [playgroundLoading, setPlaygroundLoading] = useState(false);
 
   const markCompleted = useCallback(async () => {
     try {
@@ -57,6 +58,22 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
     await markCompleted();
     onClose();
   }, [markCompleted, onClose]);
+
+  const handlePlayground = useCallback(async () => {
+    setPlaygroundLoading(true);
+    try {
+      const res = await fetch("/api/databases/playground", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to create playground");
+      const data = await res.json();
+      setCreatedDbId(data.id);
+      setStep(3);
+      await markCompleted();
+    } catch (err) {
+      console.error("Playground setup failed:", err);
+    } finally {
+      setPlaygroundLoading(false);
+    }
+  }, [markCompleted]);
 
   // Step 2: auto-sync when advancing
   useEffect(() => {
@@ -146,7 +163,13 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
 
         {/* Step content */}
         <div className="px-6 pb-6">
-          {step === 0 && <WelcomeStep onNext={() => setStep(1)} />}
+          {step === 0 && (
+            <WelcomeStep
+              onNext={() => setStep(1)}
+              onPlayground={handlePlayground}
+              playgroundLoading={playgroundLoading}
+            />
+          )}
           {step === 1 && <ConnectStep onDbCreated={handleDbCreated} />}
           {step === 2 && (
             <SyncStep
@@ -168,7 +191,15 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
   );
 }
 
-function WelcomeStep({ onNext }: { onNext: () => void }) {
+function WelcomeStep({
+  onNext,
+  onPlayground,
+  playgroundLoading,
+}: {
+  onNext: () => void;
+  onPlayground: () => void;
+  playgroundLoading: boolean;
+}) {
   return (
     <div className="flex flex-col items-center text-center py-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -202,9 +233,24 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         </div>
       </div>
 
-      <Button onClick={onNext} className="gap-2">
-        Let&apos;s get started <ArrowRight className="h-4 w-4" />
-      </Button>
+      <div className="flex flex-col gap-2 items-center">
+        <Button onClick={onNext} className="gap-2">
+          Connect your database <ArrowRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          onClick={onPlayground}
+          disabled={playgroundLoading}
+          className="gap-2 text-muted-foreground"
+        >
+          {playgroundLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          Try with sample data
+        </Button>
+      </div>
     </div>
   );
 }

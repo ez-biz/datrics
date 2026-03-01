@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AnimatedDashboard } from "@/components/dashboard/animated-dashboard";
 import { OnboardingProvider } from "@/components/onboarding/OnboardingProvider";
+import { initPlaygroundDatabase } from "@/lib/init-playground";
 
 export default async function HomePage() {
   const session = await auth();
@@ -14,6 +15,12 @@ export default async function HomePage() {
       prisma.databaseConnection.count(),
       prisma.setting.findUnique({ where: { key: "onboarding_completed" } }),
     ]);
+
+    // Auto-register the playground database on first visit if no databases exist
+    if (dbCount === 0) {
+      await initPlaygroundDatabase();
+    }
+
     showOnboarding = dbCount === 0 && onboardingSetting?.value !== "true";
   }
 

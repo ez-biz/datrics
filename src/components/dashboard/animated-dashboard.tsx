@@ -16,6 +16,7 @@ import {
   Clock,
   ArrowRight,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Logo } from "@/components/ui/logo";
@@ -61,9 +62,12 @@ export function AnimatedDashboard({ isAdmin }: { isAdmin: boolean }) {
   const router = useRouter();
   const [recentQuestions, setRecentQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasDatabases, setHasDatabases] = useState(true);
+  const [playgroundLoading, setPlaygroundLoading] = useState(false);
 
   useEffect(() => {
     fetchRecentQuestions();
+    fetchDatabaseCount();
   }, []);
 
   const fetchRecentQuestions = async () => {
@@ -77,6 +81,33 @@ export function AnimatedDashboard({ isAdmin }: { isAdmin: boolean }) {
       console.error("Failed to fetch recent questions:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDatabaseCount = async () => {
+    try {
+      const response = await fetch("/api/databases");
+      if (response.ok) {
+        const data = await response.json();
+        setHasDatabases(data.length > 0);
+      }
+    } catch {
+      // Non-critical
+    }
+  };
+
+  const handlePlayground = async () => {
+    setPlaygroundLoading(true);
+    try {
+      const res = await fetch("/api/databases/playground", { method: "POST" });
+      if (res.ok) {
+        setHasDatabases(true);
+        router.push("/question/new");
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setPlaygroundLoading(false);
     }
   };
 
@@ -150,6 +181,32 @@ export function AnimatedDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </p>
               </div>
             </Link>
+          </motion.div>
+        )}
+
+        {!hasDatabases && (
+          <motion.div variants={item}>
+            <button
+              onClick={handlePlayground}
+              disabled={playgroundLoading}
+              className="group flex flex-col gap-3 p-6 rounded-xl border border-dashed bg-card hover:shadow-md hover:border-primary/30 transition-all h-full w-full text-left"
+            >
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-500/10 text-purple-500">
+                {playgroundLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-5 w-5" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-semibold group-hover:text-primary transition-colors">
+                  Try Sample Database
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Explore with pre-loaded e-commerce data
+                </p>
+              </div>
+            </button>
           </motion.div>
         )}
       </motion.div>

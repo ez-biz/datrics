@@ -71,24 +71,40 @@ model Collection {
 }
 
 model Question {
-  id              String          @id @default(cuid())
+  id              String            @id @default(cuid())
   name            String
   description     String?
-  type            String          // QUERY_BUILDER, NATIVE_SQL
-  queryDefinition String          // JSON — AQR or raw SQL
-  vizSettings     String?         // JSON — chart type + config
+  type            String            // QUERY_BUILDER, NATIVE_SQL
+  queryDefinition String            // JSON — AQR or raw SQL
+  vizSettings     String?           // JSON — chart type + config
   databaseId      String
   collectionId    String?
-  collection      Collection?     @relation(fields: [collectionId], references: [id])
+  collection      Collection?       @relation(fields: [collectionId], references: [id])
   creatorId       String
-  creator         User            @relation(fields: [creatorId], references: [id])
+  creator         User              @relation(fields: [creatorId], references: [id])
   dashboardCards  DashboardCard[]
-  cacheTTL        Int?            // seconds
-  tags            String?         // JSON array
-  verified        Boolean         @default(false)
-  archived        Boolean         @default(false)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  versions        QuestionVersion[]
+  cacheTTL        Int?              // seconds
+  tags            String?           // JSON array
+  verified        Boolean           @default(false)
+  archived        Boolean           @default(false)
+  isPublic        Boolean           @default(false)
+  publicSlug      String?           @unique
+  embedToken      String?           @unique
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model QuestionVersion {
+  id              String   @id @default(cuid())
+  questionId      String
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  version         Int
+  queryDefinition String   // JSON snapshot
+  vizSettings     String?  // JSON snapshot
+  changeNote      String?
+  createdById     String
+  createdAt       DateTime @default(now())
 }
 
 model Dashboard {
@@ -103,6 +119,8 @@ model Dashboard {
   filters      String?         // JSON — filter definitions
   isPublic     Boolean         @default(false)
   publicSlug   String?         @unique
+  embedToken   String?         @unique
+  templateId   String?         // Which template was used to create this
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 }

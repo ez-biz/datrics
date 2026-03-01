@@ -13,6 +13,11 @@ import {
   Clock,
   Database,
   RefreshCw,
+  History,
+  RotateCcw,
+  Share2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -28,11 +33,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ResultsTable } from "@/components/query/ResultsTable";
 import { QueryChart, VizSettings } from "@/components/query/QueryChart";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { generateSQL } from "@/lib/query-engine/sql-generator";
+
+interface Version {
+  id: string;
+  version: number;
+  changeNote: string | null;
+  createdAt: string;
+  createdById: string;
+}
 
 interface Question {
   id: string;
@@ -48,6 +76,9 @@ interface Question {
   archived: boolean;
   createdAt: string;
   updatedAt: string;
+  isPublic?: boolean;
+  publicSlug?: string | null;
+  embedToken?: string | null;
 }
 
 export default function QuestionPage({
@@ -64,6 +95,18 @@ export default function QuestionPage({
   const [error, setError] = useState<string | null>(null);
   const [generatedSql, setGeneratedSql] = useState("");
   const [vizSettings, setVizSettings] = useState<VizSettings>({ chartType: "table" });
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [savingVersion, setSavingVersion] = useState(false);
+
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
+  const [embedToken, setEmbedToken] = useState<string | null>(null);
+  const [sharingLoading, setSharingLoading] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const hasUserChangedViz = useRef(false);
   const vizSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,6 +158,9 @@ export default function QuestionPage({
       }
       const data = await response.json();
       setQuestion(data);
+      if (data.isPublic !== undefined) setIsPublic(data.isPublic);
+      if (data.publicSlug) setPublicSlug(data.publicSlug);
+      if (data.embedToken) setEmbedToken(data.embedToken);
       if (data.vizSettings) {
         setVizSettings(data.vizSettings);
       }
@@ -169,6 +215,85 @@ export default function QuestionPage({
     } finally {
       setRunning(false);
       setLoading(false);
+    }
+  };
+
+  const toggleSharing = async (newValue: boolean) => {
+    if (!question) return;
+    setSharingLoading(true);
+    try {
+      const response = await fetch(`/api/questions/${question.id}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublic: newValue }),
+      });
+      if (!response.ok) throw new Error("Failed to update sharing");
+      const data = await response.json();
+      setIsPublic(data.isPublic);
+      setPublicSlug(data.publicSlug);
+      setEmbedToken(data.embedToken);
+      toast.success(data.isPublic ? "Public sharing enabled" : "Public sharing disabled");
+    } catch {
+      toast.error("Failed to update sharing settings");
+    } finally {
+      setSharingLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const fetchVersions = async () => {
+    setVersionsLoading(true);
+    try {
+      const response = await fetch(`/api/questions/${id}/versions`);
+      if (!response.ok) throw new Error("Failed to fetch versions");
+      const data = await response.json();
+      setVersions(data.versions);
+    } catch {
+      toast.error("Failed to load version history");
+    } finally {
+      setVersionsLoading(false);
+    }
+  };
+
+  const saveVersion = async () => {
+    const changeNote = prompt("Change note (optional):");
+    if (changeNote === null) return;
+    setSavingVersion(true);
+    try {
+      const response = await fetch(`/api/questions/${id}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ changeNote: changeNote || undefined }),
+      });
+      if (!response.ok) throw new Error("Failed to save version");
+      toast.success("Version saved");
+      fetchVersions();
+    } catch {
+      toast.error("Failed to save version");
+    } finally {
+      setSavingVersion(false);
+    }
+  };
+
+  const restoreVersion = async (versionId: string) => {
+    if (!confirm("Restore this version? Current state will be overwritten.")) return;
+    try {
+      const response = await fetch(
+        `/api/questions/${id}/versions/${versionId}/restore`,
+        { method: "POST" }
+      );
+      if (!response.ok) throw new Error("Failed to restore version");
+      toast.success("Version restored");
+      setHistoryOpen(false);
+      fetchQuestion();
+    } catch {
+      toast.error("Failed to restore version");
     }
   };
 
@@ -255,6 +380,95 @@ export default function QuestionPage({
             )}
             {running ? "Running..." : "Refresh"}
           </Button>
+          <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Share Question</DialogTitle>
+                <DialogDescription>
+                  Control public access and get embed codes for this question.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-sm font-medium">Public sharing</label>
+                    <p className="text-xs text-muted-foreground">
+                      Anyone with the link can view this question
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isPublic}
+                    onCheckedChange={toggleSharing}
+                    disabled={sharingLoading}
+                  />
+                </div>
+                {isPublic && publicSlug && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Public URL</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          readOnly
+                          value={`${typeof window !== "undefined" ? window.location.origin : ""}/public/question/${publicSlug}`}
+                          className="flex-1 rounded-md border bg-muted px-3 py-2 text-xs font-mono"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            copyToClipboard(
+                              `${window.location.origin}/public/question/${publicSlug}`,
+                              "url"
+                            )
+                          }
+                        >
+                          {copiedField === "url" ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    {embedToken && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Embed code</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            readOnly
+                            value={`<iframe src="${typeof window !== "undefined" ? window.location.origin : ""}/embed/question/${embedToken}" width="100%" height="400" frameborder="0"></iframe>`}
+                            className="flex-1 rounded-md border bg-muted px-3 py-2 text-xs font-mono"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() =>
+                              copyToClipboard(
+                                `<iframe src="${window.location.origin}/embed/question/${embedToken}" width="100%" height="400" frameborder="0"></iframe>`,
+                                "embed"
+                              )
+                            }
+                          >
+                            {copiedField === "embed" ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon">
@@ -273,6 +487,15 @@ export default function QuestionPage({
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setHistoryOpen(true);
+                  fetchVersions();
+                }}
+              >
+                <History className="h-4 w-4 mr-2" />
+                Version History
+              </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <Archive className="h-4 w-4 mr-2" />
                 Archive
@@ -289,6 +512,77 @@ export default function QuestionPage({
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Version History Sheet */}
+      <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Version History</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <Button
+              onClick={saveVersion}
+              disabled={savingVersion}
+              className="w-full gap-2"
+            >
+              {savingVersion ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <History className="h-4 w-4" />
+              )}
+              {savingVersion ? "Saving..." : "Save Version"}
+            </Button>
+
+            <div className="space-y-2">
+              {versionsLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : versions.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No versions yet. Save a version to create a snapshot.
+                </p>
+              ) : (
+                versions.map((version) => (
+                  <div
+                    key={version.id}
+                    className="flex items-start justify-between rounded-lg border p-3 gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          v{version.version}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {formatDistanceToNow(new Date(version.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                      </div>
+                      {version.changeNote && (
+                        <p className="text-sm mt-1 text-muted-foreground">
+                          {version.changeNote}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => restoreVersion(version.id)}
+                      className="shrink-0 gap-1"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Restore
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">

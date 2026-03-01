@@ -6,6 +6,7 @@ import {
   AggregateColumn,
   SortClause,
   JoinClause,
+  HavingCondition,
 } from "@/lib/query-engine/types";
 
 interface QueryBuilderState {
@@ -17,6 +18,7 @@ interface QueryBuilderState {
   filters: FilterGroup;
   aggregations: AggregateColumn[];
   groupBy: { table?: string; column: string }[];
+  having: HavingCondition[];
   orderBy: SortClause[];
   limit?: number;
 
@@ -26,11 +28,15 @@ interface QueryBuilderState {
   toggleColumn: (column: string, table?: string) => void;
   selectAllColumns: (columns: string[], table?: string) => void;
   clearColumns: () => void;
-  
+
   setFilters: (filters: FilterGroup) => void;
   addFilter: (condition: FilterCondition) => void;
   removeFilter: (index: number) => void;
   updateFilter: (index: number, condition: FilterCondition) => void;
+  toggleFilterLogic: () => void;
+  addFilterGroup: () => void;
+  updateFilterAt: (path: number[], item: FilterCondition | FilterGroup) => void;
+  removeFilterAt: (path: number[]) => void;
 
   setAggregations: (aggregations: AggregateColumn[]) => void;
   addAggregation: (aggregation: AggregateColumn) => void;
@@ -40,12 +46,16 @@ interface QueryBuilderState {
   addGroupBy: (group: { table?: string; column: string }) => void;
   removeGroupBy: (index: number) => void;
 
+  addHaving: (condition: HavingCondition) => void;
+  removeHaving: (index: number) => void;
+  updateHaving: (index: number, condition: HavingCondition) => void;
+
   setOrderBy: (orderBy: SortClause[]) => void;
   addOrderBy: (sort: SortClause) => void;
   removeOrderBy: (index: number) => void;
 
   setLimit: (limit: number | undefined) => void;
-  
+
   reset: () => void;
   toAbstractQuery: () => AbstractQuery;
 }
@@ -59,9 +69,31 @@ const initialState = {
   filters: { logic: "AND" as const, conditions: [] },
   aggregations: [],
   groupBy: [],
+  having: [] as HavingCondition[],
   orderBy: [],
   limit: 2000,
 };
+
+// Helper to update nested filter at a path
+function updateAtPath(
+  group: FilterGroup,
+  path: number[],
+  updater: (items: (FilterCondition | FilterGroup)[]) => (FilterCondition | FilterGroup)[]
+): FilterGroup {
+  if (path.length === 0) {
+    return { ...group, conditions: updater(group.conditions) };
+  }
+
+  const [head, ...rest] = path;
+  const newConditions = [...group.conditions];
+  const target = newConditions[head];
+
+  if ("logic" in target) {
+    newConditions[head] = updateAtPath(target as FilterGroup, rest, updater);
+  }
+
+  return { ...group, conditions: newConditions };
+}
 
 export const useQueryBuilderStore = create<QueryBuilderState>((set, get) => ({
   ...initialState,
@@ -76,10 +108,11 @@ export const useQueryBuilderStore = create<QueryBuilderState>((set, get) => ({
     set({
       sourceTable: table,
       sourceSchema: schema,
-      columns: [], // Clear columns when table changes
+      columns: [],
       filters: { logic: "AND", conditions: [] },
       aggregations: [],
       groupBy: [],
+      having: [],
       orderBy: [],
     }),
 
@@ -129,6 +162,53 @@ export const useQueryBuilderStore = create<QueryBuilderState>((set, get) => ({
       return { filters: { ...state.filters, conditions: newConditions } };
     }),
 
+  toggleFilterLogic: () =>
+    set((state) => ({
+      filters: {
+        ...state.filters,
+        logic: state.filters.logic === "AND" ? "OR" : "AND",
+      },
+    })),
+
+  addFilterGroup: () =>
+    set((state) => ({
+      filters: {
+        ...state.filters,
+        conditions: [
+          ...state.filters.conditions,
+          { logic: "AND" as const, conditions: [] },
+        ],
+      },
+    })),
+
+  updateFilterAt: (path, item) =>
+    set((state) => {
+      if (path.length === 0) return state;
+      const parentPath = path.slice(0, -1);
+      const index = path[path.length - 1];
+      return {
+        filters: updateAtPath(state.filters, parentPath, (items) => {
+          const newItems = [...items];
+          newItems[index] = item;
+          return newItems;
+        }),
+      };
+    }),
+
+  removeFilterAt: (path) =>
+    set((state) => {
+      if (path.length === 0) return state;
+      const parentPath = path.slice(0, -1);
+      const index = path[path.length - 1];
+      return {
+        filters: updateAtPath(state.filters, parentPath, (items) => {
+          const newItems = [...items];
+          newItems.splice(index, 1);
+          return newItems;
+        }),
+      };
+    }),
+
   setAggregations: (aggregations) => set({ aggregations }),
 
   addAggregation: (aggregation) =>
@@ -151,6 +231,23 @@ export const useQueryBuilderStore = create<QueryBuilderState>((set, get) => ({
       const newGroups = [...state.groupBy];
       newGroups.splice(index, 1);
       return { groupBy: newGroups };
+    }),
+
+  addHaving: (condition) =>
+    set((state) => ({ having: [...state.having, condition] })),
+
+  removeHaving: (index) =>
+    set((state) => {
+      const newHaving = [...state.having];
+      newHaving.splice(index, 1);
+      return { having: newHaving };
+    }),
+
+  updateHaving: (index, condition) =>
+    set((state) => {
+      const newHaving = [...state.having];
+      newHaving[index] = condition;
+      return { having: newHaving };
     }),
 
   setOrderBy: (orderBy) => set({ orderBy }),
@@ -179,6 +276,7 @@ export const useQueryBuilderStore = create<QueryBuilderState>((set, get) => ({
       filters: state.filters.conditions.length > 0 ? state.filters : undefined,
       aggregations: state.aggregations,
       groupBy: state.groupBy,
+      having: state.having.length > 0 ? state.having : undefined,
       orderBy: state.orderBy,
       limit: state.limit,
     };

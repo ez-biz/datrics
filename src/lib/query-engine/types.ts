@@ -78,6 +78,17 @@ export interface SortClause {
   direction: "ASC" | "DESC";
 }
 
+export type HavingOperator = "=" | "!=" | ">" | "<" | ">=" | "<=";
+
+export interface HavingCondition {
+  aggregation: {
+    fn: AggregateFunction;
+    column: string;
+  };
+  operator: HavingOperator;
+  value: number;
+}
+
 export interface JoinClause {
   table: string;
   type: "inner" | "left" | "right";
@@ -95,6 +106,7 @@ export interface AbstractQuery {
   filters?: FilterGroup;
   aggregations: AggregateColumn[];
   groupBy: { table?: string; column: string }[];
+  having?: HavingCondition[];
   orderBy: SortClause[];
   limit?: number;
   offset?: number;

@@ -37,6 +37,7 @@ import {
   AreaChart as AreaChartIcon,
   Hash,
 } from "lucide-react";
+import { ChartTypePicker } from "./ChartTypePicker";
 
 interface QueryColumn {
   name: string;
@@ -58,7 +59,7 @@ export interface VizSettings {
   colors?: string[];
 }
 
-const CHART_COLORS = [
+export const CHART_COLORS = [
   "#6366f1", // indigo
   "#22c55e", // green
   "#f59e0b", // amber
@@ -69,7 +70,7 @@ const CHART_COLORS = [
   "#ec4899", // pink
 ];
 
-const CHART_TYPES = [
+export const CHART_TYPES = [
   { value: "bar", label: "Bar Chart", icon: BarChart3 },
   { value: "line", label: "Line Chart", icon: LineChartIcon },
   { value: "area", label: "Area Chart", icon: AreaChartIcon },
@@ -78,7 +79,7 @@ const CHART_TYPES = [
   { value: "number", label: "Number", icon: Hash },
 ];
 
-function isNumericType(type: string): boolean {
+export function isNumericType(type: string): boolean {
   const numericTypes = [
     "integer",
     "int",
@@ -339,30 +340,17 @@ function ChartControls({
   const numericColumns = columns.filter((c) => isNumericType(c.type));
 
   return (
-    <div className="flex flex-wrap gap-4 p-3 bg-muted/30 rounded-lg border">
+    <div className="flex flex-wrap items-end gap-4 p-3 bg-muted/30 rounded-lg border">
       {/* Chart Type */}
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs text-muted-foreground">Chart Type</Label>
-        <Select
+        <ChartTypePicker
           value={settings.chartType}
-          onValueChange={(value) =>
+          onChange={(value) =>
             onUpdate({ chartType: value as VizSettings["chartType"] })
           }
-        >
-          <SelectTrigger className="w-[140px] h-8">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CHART_TYPES.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                <div className="flex items-center gap-2">
-                  <type.icon className="h-4 w-4" />
-                  {type.label}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          size="sm"
+        />
       </div>
 
       {/* X-Axis */}

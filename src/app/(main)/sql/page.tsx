@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Play,
@@ -46,6 +47,7 @@ import { SqlHistoryPanel } from "@/components/query/SqlHistoryPanel";
 import { SqlTemplatesPanel } from "@/components/query/SqlTemplatesPanel";
 import { useSqlHistoryStore } from "@/stores/sql-history-store";
 import { formatSQL } from "@/lib/sql-formatter";
+import { suggestChart, type ChartSuggestion } from "@/lib/chart-suggestions";
 import {
   Tooltip,
   TooltipContent,
@@ -71,7 +73,25 @@ interface QueryResultData {
 
 type SidebarTab = "schema" | "history" | "templates";
 
+// Wrap in Suspense for useSearchParams
 export default function SqlPlaygroundPage() {
+  return (
+    <Suspense>
+      <SqlPlaygroundInner />
+    </Suspense>
+  );
+}
+
+interface EditingQuestion {
+  id: string;
+  name: string;
+  description: string;
+}
+
+function SqlPlaygroundInner() {
+  const searchParams = useSearchParams();
+  const editQuestionId = searchParams.get("edit");
+
   // State
   const [databases, setDatabases] = useState<DatabaseOption[]>([]);
   const [selectedDbId, setSelectedDbId] = useState<string>("");
@@ -85,10 +105,41 @@ export default function SqlPlaygroundPage() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("schema");
   const [activeTab, setActiveTab] = useState<string>("table");
   const [vizSettings, setVizSettings] = useState<VizSettings>({ chartType: "table" });
+  const [editingQuestion, setEditingQuestion] = useState<EditingQuestion | null>(null);
+  const [chartSuggestion, setChartSuggestion] = useState<ChartSuggestion | null>(null);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const sqlRef = useRef(sql);
   sqlRef.current = sql;
 
   const { addEntry } = useSqlHistoryStore();
+
+  // Load question for edit mode
+  useEffect(() => {
+    if (!editQuestionId) {
+      setEditingQuestion(null);
+      return;
+    }
+
+    fetch(`/api/questions/${editQuestionId}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load question");
+        return r.json();
+      })
+      .then((q) => {
+        setEditingQuestion({
+          id: q.id,
+          name: q.name,
+          description: q.description || "",
+        });
+        const queryDef = q.queryDefinition;
+        const sqlText =
+          typeof queryDef === "string" ? queryDef : queryDef?.sql || "";
+        setSql(sqlText);
+        if (q.databaseId) setSelectedDbId(q.databaseId);
+        if (q.vizSettings) setVizSettings(q.vizSettings);
+      })
+      .catch(() => toast.error("Failed to load question for editing"));
+  }, [editQuestionId]);
 
   // Fetch databases
   useEffect(() => {
@@ -173,6 +224,15 @@ export default function SqlPlaygroundPage() {
         setResult(data);
         toast.success(`Query completed in ${data.executionTimeMs}ms`);
 
+        // Compute chart suggestion
+        const suggestion = suggestChart(data.columns, data.rowCount);
+        if (suggestion.chartType !== "table" && suggestion.confidence !== "low") {
+          setChartSuggestion(suggestion);
+          setSuggestionDismissed(false);
+        } else {
+          setChartSuggestion(null);
+        }
+
         // Add to history with success
         addEntry({
           sql: currentSql,
@@ -210,6 +270,18 @@ export default function SqlPlaygroundPage() {
     toast.success("SQL formatted");
   }, [sql]);
 
+  // Apply chart suggestion
+  const applySuggestion = useCallback(() => {
+    if (!chartSuggestion) return;
+    setVizSettings({
+      chartType: chartSuggestion.chartType,
+      xAxis: chartSuggestion.xAxis,
+      yAxis: chartSuggestion.yAxis,
+    });
+    setActiveTab("chart");
+    setSuggestionDismissed(true);
+  }, [chartSuggestion]);
+
   // Listen for format keyboard shortcut
   useEffect(() => {
     const handleFormatEvent = () => {
@@ -227,7 +299,9 @@ export default function SqlPlaygroundPage() {
       <div className="flex items-center gap-3 px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-2">
           <Code2 className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">SQL Editor</h1>
+          <h1 className="text-lg font-semibold">
+            {editingQuestion ? `Editing: ${editingQuestion.name}` : "SQL Editor"}
+          </h1>
         </div>
 
         <div className="flex-1" />
@@ -292,6 +366,18 @@ export default function SqlPlaygroundPage() {
           type="NATIVE_SQL"
           vizSettings={vizSettings}
           disabled={!selectedDbId || !result}
+          columns={result?.columns}
+          rows={result?.rows}
+          onVizSettingsChange={setVizSettings}
+          editMode={
+            editingQuestion
+              ? {
+                  questionId: editingQuestion.id,
+                  name: editingQuestion.name,
+                  description: editingQuestion.description,
+                }
+              : undefined
+          }
         />
 
         <Button
@@ -415,16 +501,48 @@ export default function SqlPlaygroundPage() {
           <div className="flex-1 overflow-hidden flex flex-col px-4 pb-4">
             {result && (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <TabsList className="h-8 w-fit">
-                  <TabsTrigger value="table" className="text-xs gap-1.5">
-                    <Table className="h-3 w-3" />
-                    Table
-                  </TabsTrigger>
-                  <TabsTrigger value="chart" className="text-xs gap-1.5">
-                    <BarChart3 className="h-3 w-3" />
-                    Chart
-                  </TabsTrigger>
-                </TabsList>
+                <div className="flex items-center gap-3">
+                  <TabsList className="h-8 w-fit">
+                    <TabsTrigger value="table" className="text-xs gap-1.5">
+                      <Table className="h-3 w-3" />
+                      Table
+                    </TabsTrigger>
+                    <TabsTrigger value="chart" className="text-xs gap-1.5">
+                      <BarChart3 className="h-3 w-3" />
+                      Chart
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* Chart suggestion banner */}
+                  {chartSuggestion &&
+                    !suggestionDismissed &&
+                    activeTab === "table" &&
+                    chartSuggestion.confidence === "high" && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-1.5 border">
+                        <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                        <span>
+                          This looks like a{" "}
+                          <strong className="text-foreground">
+                            {chartSuggestion.label}
+                          </strong>
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs text-primary"
+                          onClick={applySuggestion}
+                        >
+                          Try it
+                        </Button>
+                        <button
+                          className="text-muted-foreground/60 hover:text-muted-foreground ml-1"
+                          onClick={() => setSuggestionDismissed(true)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                </div>
 
                 <TabsContent value="table" className="flex-1 overflow-auto mt-2">
                   <ResultsTable

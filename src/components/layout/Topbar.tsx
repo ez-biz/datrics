@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/tooltip";
 import { KeyboardShortcutsDialog } from "@/components/KeyboardShortcutsDialog";
 import { GlobalKeyboardHandler } from "@/components/GlobalKeyboardHandler";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function Topbar() {
   const { theme, setTheme } = useTheme();
@@ -43,6 +44,16 @@ export function Topbar() {
             </div>
           </TooltipTrigger>
           <TooltipContent>Keyboard shortcuts (?)</TooltipContent>
+        </Tooltip>
+
+        {/* Notifications */}
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div>
+              <NotificationBell />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>Notifications</TooltipContent>
         </Tooltip>
 
         {/* Theme toggle */}

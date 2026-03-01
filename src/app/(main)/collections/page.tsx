@@ -15,6 +15,7 @@ import {
   Trash2,
   FolderInput,
   Search,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,13 +192,47 @@ export default function CollectionsPage() {
           </p>
         </div>
 
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setCreateDialogOpen(true)}>
+                <FolderPlus className="mr-2 h-4 w-4" />
+                New Collection
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  const url = parentId
+                    ? `/question/new?collectionId=${parentId}`
+                    : "/question/new";
+                  router.push(url);
+                }}
+              >
+                <FileQuestion className="mr-2 h-4 w-4" />
+                New Question
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const url = parentId
+                    ? `/dashboards?new=true&collectionId=${parentId}`
+                    : "/dashboards?new=true";
+                  router.push(url);
+                }}
+              >
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                New Dashboard
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <FolderPlus className="mr-2 h-4 w-4" />
-              New Collection
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Collection</DialogTitle>

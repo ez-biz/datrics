@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Database,
@@ -46,6 +46,8 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export default function NewQuestionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const collectionId = searchParams.get("collectionId");
   const store = useQueryBuilderStore();
 
   const [engine, setEngine] = useState<"POSTGRESQL" | "MYSQL" | "SQLITE">(
@@ -229,6 +231,7 @@ export default function NewQuestionPage() {
             type="QUERY_BUILDER"
             vizSettings={vizSettings}
             disabled={!store.sourceTable || !result}
+            collectionId={collectionId}
           />
         </div>
       </div>

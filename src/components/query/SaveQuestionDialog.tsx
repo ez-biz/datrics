@@ -25,6 +25,7 @@ interface SaveQuestionDialogProps {
   type: "QUERY_BUILDER" | "NATIVE_SQL";
   vizSettings?: VizSettings;
   disabled?: boolean;
+  collectionId?: string | null;
   onSaved?: (questionId: string) => void;
 }
 
@@ -34,6 +35,7 @@ export function SaveQuestionDialog({
   type,
   vizSettings,
   disabled,
+  collectionId,
   onSaved,
 }: SaveQuestionDialogProps) {
   const router = useRouter();
@@ -61,6 +63,7 @@ export function SaveQuestionDialog({
           queryDefinition,
           vizSettings: vizSettings || { chartType: "table" },
           databaseId,
+          collectionId: collectionId || undefined,
         }),
       });
 

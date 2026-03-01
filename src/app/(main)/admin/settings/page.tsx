@@ -25,6 +25,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [testing, setTesting] = useState(false);
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
+  const [testingSlack, setTestingSlack] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function SettingsPage() {
         setSmtpPass(data.smtp_pass || "");
         setSmtpFrom(data.smtp_from || "");
         setSmtpSecure(data.smtp_secure === "true");
+        setSlackWebhookUrl(data.slack_webhook_url || "");
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -55,6 +58,7 @@ export default function SettingsPage() {
           smtp_pass: smtpPass,
           smtp_from: smtpFrom,
           smtp_secure: smtpSecure ? "true" : "false",
+          slack_webhook_url: slackWebhookUrl,
         }),
       });
       if (res.ok) {
@@ -210,6 +214,66 @@ export default function SettingsPage() {
             <Button onClick={handleTestEmail} disabled={testing}>
               <Send className="h-4 w-4 mr-2" />
               {testing ? "Sending..." : "Send Test"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Slack</CardTitle>
+          <CardDescription>
+            Configure a Slack incoming webhook for alert notifications
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="slack-webhook">Webhook URL</Label>
+            <Input
+              id="slack-webhook"
+              value={slackWebhookUrl}
+              onChange={(e) => setSlackWebhookUrl(e.target.value)}
+              placeholder="https://hooks.slack.com/services/..."
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save Settings"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setTestingSlack(true);
+                try {
+                  // Save first so the webhook URL is persisted
+                  await fetch("/api/admin/settings", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ slack_webhook_url: slackWebhookUrl }),
+                  });
+                  const res = await fetch("/api/admin/settings/test-slack", {
+                    method: "POST",
+                  });
+                  if (res.ok) {
+                    toast.success("Test message sent to Slack!");
+                  } else {
+                    const data = await res.json();
+                    throw new Error(data.error || "Failed to send");
+                  }
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to send test Slack message"
+                  );
+                } finally {
+                  setTestingSlack(false);
+                }
+              }}
+              disabled={testingSlack || !slackWebhookUrl}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {testingSlack ? "Sending..." : "Test Slack"}
             </Button>
           </div>
         </CardContent>

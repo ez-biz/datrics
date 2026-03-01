@@ -36,6 +36,7 @@ interface AlertData {
   enabled?: boolean;
   notifyInApp: boolean;
   notifyEmail: boolean;
+  notifySlack: boolean;
   question?: Question;
 }
 
@@ -75,6 +76,7 @@ export function AlertForm({
   const [threshold, setThreshold] = useState(0);
   const [notifyInApp, setNotifyInApp] = useState(true);
   const [notifyEmail, setNotifyEmail] = useState(false);
+  const [notifySlack, setNotifySlack] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -96,6 +98,7 @@ export function AlertForm({
       setThreshold(alert.threshold);
       setNotifyInApp(alert.notifyInApp);
       setNotifyEmail(alert.notifyEmail);
+      setNotifySlack(alert.notifySlack);
     } else {
       setName("");
       setQuestionId("");
@@ -104,6 +107,7 @@ export function AlertForm({
       setThreshold(0);
       setNotifyInApp(true);
       setNotifyEmail(false);
+      setNotifySlack(false);
     }
   }, [alert, open]);
 
@@ -120,6 +124,7 @@ export function AlertForm({
         threshold,
         notifyInApp,
         notifyEmail,
+        notifySlack,
       };
 
       const res = isEditing
@@ -248,6 +253,14 @@ export function AlertForm({
                 id="notify-email"
                 checked={notifyEmail}
                 onCheckedChange={setNotifyEmail}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notify-slack">Slack notification</Label>
+              <Switch
+                id="notify-slack"
+                checked={notifySlack}
+                onCheckedChange={setNotifySlack}
               />
             </div>
           </div>

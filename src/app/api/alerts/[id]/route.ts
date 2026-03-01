@@ -11,6 +11,7 @@ const updateAlertSchema = z.object({
   enabled: z.boolean().optional(),
   notifyInApp: z.boolean().optional(),
   notifyEmail: z.boolean().optional(),
+  notifySlack: z.boolean().optional(),
 });
 
 async function getUser() {

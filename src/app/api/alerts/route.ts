@@ -11,6 +11,7 @@ const createAlertSchema = z.object({
   threshold: z.number(),
   notifyInApp: z.boolean().optional(),
   notifyEmail: z.boolean().optional(),
+  notifySlack: z.boolean().optional(),
 });
 
 // GET /api/alerts - List current user's alerts
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
         threshold: validated.threshold,
         notifyInApp: validated.notifyInApp ?? true,
         notifyEmail: validated.notifyEmail ?? false,
+        notifySlack: validated.notifySlack ?? false,
       },
       include: {
         question: { select: { id: true, name: true, databaseId: true } },

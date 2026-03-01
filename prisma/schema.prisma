@@ -188,6 +188,7 @@ model Alert {
   lastValue       Float?
   notifyInApp     Boolean   @default(true)
   notifyEmail     Boolean   @default(false)
+  notifySlack     Boolean   @default(false)
   notifications   Notification[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

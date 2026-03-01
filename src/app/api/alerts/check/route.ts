@@ -9,6 +9,7 @@ import {
   AlertOperator,
 } from "@/lib/alert-evaluator";
 import { sendEmail } from "@/lib/email";
+import { sendSlackNotification } from "@/lib/slack";
 
 // POST /api/alerts/check - Run all enabled alerts for the current user
 export async function POST() {
@@ -105,6 +106,11 @@ export async function POST() {
             title,
             `<h3>${title}</h3><p>${message}</p><p>Question: ${question.name}</p>`
           );
+        }
+
+        // Send Slack notification
+        if (alert.notifySlack) {
+          await sendSlackNotification(title, message);
         }
       }
 

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-const SMTP_KEYS = [
+const SETTING_KEYS = [
   "smtp_host",
   "smtp_port",
   "smtp_user",
   "smtp_pass",
   "smtp_from",
   "smtp_secure",
+  "slack_webhook_url",
 ];
 
 async function requireAdmin() {
@@ -29,7 +30,7 @@ export async function GET() {
   }
 
   const settings = await db.setting.findMany({
-    where: { key: { in: SMTP_KEYS } },
+    where: { key: { in: SETTING_KEYS } },
   });
 
   const result: Record<string, string> = {};
@@ -51,7 +52,7 @@ export async function PUT(request: NextRequest) {
   const body = (await request.json()) as Record<string, string>;
 
   for (const [key, value] of Object.entries(body)) {
-    if (!SMTP_KEYS.includes(key)) continue;
+    if (!SETTING_KEYS.includes(key)) continue;
     // Skip masked password
     if (key === "smtp_pass" && value === "••••••••") continue;
 

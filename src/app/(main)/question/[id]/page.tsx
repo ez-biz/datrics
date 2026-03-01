@@ -253,7 +253,7 @@ export default function QuestionPage({
       const response = await fetch(`/api/questions/${id}/versions`);
       if (!response.ok) throw new Error("Failed to fetch versions");
       const data = await response.json();
-      setVersions(data.versions);
+      setVersions(Array.isArray(data) ? data : data.versions || []);
     } catch {
       toast.error("Failed to load version history");
     } finally {

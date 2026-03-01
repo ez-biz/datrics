@@ -37,6 +37,7 @@ interface Alert {
   enabled: boolean;
   notifyInApp: boolean;
   notifyEmail: boolean;
+  notifySlack: boolean;
   lastCheckedAt: string | null;
   lastTriggeredAt: string | null;
   lastValue: number | null;
@@ -230,6 +231,7 @@ export default function AlertsPage() {
                   <span className="flex gap-2">
                     {alert.notifyInApp && <Badge variant="outline">In-app</Badge>}
                     {alert.notifyEmail && <Badge variant="outline">Email</Badge>}
+                    {alert.notifySlack && <Badge variant="outline">Slack</Badge>}
                   </span>
                 </div>
               </CardContent>

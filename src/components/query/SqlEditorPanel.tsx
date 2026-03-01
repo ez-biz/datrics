@@ -46,6 +46,7 @@ import { SaveQuestionDialog } from "@/components/query/SaveQuestionDialog";
 import { SqlHistoryPanel } from "@/components/query/SqlHistoryPanel";
 import { SqlTemplatesPanel } from "@/components/query/SqlTemplatesPanel";
 import { useSqlHistoryStore } from "@/stores/sql-history-store";
+import { useSqlEditorStore } from "@/stores/sql-editor-store";
 import { formatSQL } from "@/lib/sql-formatter";
 import { suggestChart, type ChartSuggestion } from "@/lib/chart-suggestions";
 import {
@@ -88,16 +89,26 @@ export function SqlEditorPanel({
   editQuestionId,
   collectionId,
 }: SqlEditorPanelProps) {
-  // State
+  // Persisted state (survives refresh)
+  const {
+    databaseId: storedDbId,
+    sql: storedSql,
+    sidebarOpen: storedSidebarOpen,
+    setDatabaseId: setStoredDbId,
+    setSql: setStoredSql,
+    setSidebarOpen: setStoredSidebarOpen,
+  } = useSqlEditorStore();
+
+  // Local state
   const [databases, setDatabases] = useState<DatabaseOption[]>([]);
-  const [selectedDbId, setSelectedDbId] = useState<string>("");
+  const [selectedDbId, setSelectedDbIdLocal] = useState<string>(storedDbId);
   const [schema, setSchema] = useState<SchemaTable[]>([]);
-  const [sql, setSql] = useState("SELECT 1;");
+  const [sql, setSqlLocal] = useState(storedSql);
   const [result, setResult] = useState<QueryResultData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [loadingSchema, setLoadingSchema] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpenLocal] = useState(storedSidebarOpen);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("schema");
   const [activeTab, setActiveTab] = useState<string>("table");
   const [vizSettings, setVizSettings] = useState<VizSettings>({
@@ -110,6 +121,25 @@ export function SqlEditorPanel({
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const sqlRef = useRef(sql);
   sqlRef.current = sql;
+
+  // Wrappers that persist to store
+  const setSelectedDbId = useCallback((id: string) => {
+    setSelectedDbIdLocal(id);
+    setStoredDbId(id);
+  }, [setStoredDbId]);
+
+  const setSql = useCallback((val: string | ((prev: string) => string)) => {
+    setSqlLocal((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      setStoredSql(next);
+      return next;
+    });
+  }, [setStoredSql]);
+
+  const setSidebarOpen = useCallback((open: boolean) => {
+    setSidebarOpenLocal(open);
+    setStoredSidebarOpen(open);
+  }, [setStoredSidebarOpen]);
 
   const { addEntry } = useSqlHistoryStore();
 

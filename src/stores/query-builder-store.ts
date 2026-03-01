@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   AbstractQuery,
   FilterCondition,
@@ -95,7 +96,9 @@ function updateAtPath(
   return { ...group, conditions: newConditions };
 }
 
-export const useQueryBuilderStore = create<QueryBuilderState>((set, get) => ({
+export const useQueryBuilderStore = create<QueryBuilderState>()(
+  persist(
+    (set, get) => ({
   ...initialState,
 
   setDatabaseId: (id) =>
@@ -281,4 +284,21 @@ export const useQueryBuilderStore = create<QueryBuilderState>((set, get) => ({
       limit: state.limit,
     };
   },
-}));
+    }),
+    {
+      name: "query-builder-draft",
+      partialize: (state) => ({
+        databaseId: state.databaseId,
+        sourceTable: state.sourceTable,
+        sourceSchema: state.sourceSchema,
+        columns: state.columns,
+        filters: state.filters,
+        aggregations: state.aggregations,
+        groupBy: state.groupBy,
+        having: state.having,
+        orderBy: state.orderBy,
+        limit: state.limit,
+      }),
+    }
+  )
+);

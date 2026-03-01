@@ -41,7 +41,7 @@ const formSchema = z.object({
 type DatabaseFormValues = z.infer<typeof formSchema>;
 
 interface DatabaseFormProps {
-  onSuccess?: () => void;
+  onSuccess?: (db?: { id: string }) => void;
 }
 
 export function DatabaseForm({ onSuccess }: DatabaseFormProps) {
@@ -134,14 +134,15 @@ export function DatabaseForm({ onSuccess }: DatabaseFormProps) {
         body: JSON.stringify(values),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to save database");
+        throw new Error(data.error || "Failed to save database");
       }
 
       toast.success("Database connection saved!");
       router.refresh();
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess({ id: data.id });
     } catch (error: unknown) {
       if (error instanceof Error) {
         toast.error(error.message);

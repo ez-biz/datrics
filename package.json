@@ -8,6 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "setup": "node scripts/setup.js",
+    "db:push": "npx prisma db push",
+    "db:studio": "npx prisma studio",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
     "make-admin": "node scripts/make-admin.js"
   },
   "dependencies": {

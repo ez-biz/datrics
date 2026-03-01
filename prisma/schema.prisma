@@ -146,6 +146,11 @@ model Activity {
   createdAt  DateTime @default(now())
 }
 
+model Setting {
+  key   String @id
+  value String
+}
+
 model DatabasePermission {
   id          String             @id @default(cuid())
   userId      String

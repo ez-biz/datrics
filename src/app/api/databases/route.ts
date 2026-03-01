@@ -2,16 +2,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
+import { getUserDatabaseIds } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    // Only ADMIN should see database connections
-    if ((session?.user as { role?: string })?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const user = session?.user as { id?: string; role?: string };
+
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const adminView = searchParams.get("admin") === "true";
+
+    // Admin view (full details) - only for admins
+    if (adminView) {
+      if (user.role !== "ADMIN") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
+
+      const databases = await prisma.databaseConnection.findMany({
+        select: {
+          id: true,
+          name: true,
+          engine: true,
+          host: true,
+          port: true,
+          databaseName: true,
+          username: true,
+          ssl: true,
+          lastSyncedAt: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return NextResponse.json(databases);
+    }
+
+    // Regular view - filter by user's database permissions
+    const accessibleDatabaseIds = await getUserDatabaseIds(user.id);
+
     const databases = await prisma.databaseConnection.findMany({
+      where: {
+        id: { in: accessibleDatabaseIds },
+      },
       select: {
         id: true,
         name: true,
@@ -19,13 +55,11 @@ export async function GET(request: NextRequest) {
         host: true,
         port: true,
         databaseName: true,
-        username: true,
         ssl: true,
         lastSyncedAt: true,
         createdAt: true,
-        // specifically excluding passwordEnc and schemaCache from the list view for security/performance
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { name: "asc" },
     });
 
     return NextResponse.json(databases);

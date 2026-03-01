@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { getUserDatabaseIds, canAccessDatabase } from "@/lib/permissions";
 
 const createQuestionSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -51,9 +52,13 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "50");
   const offset = parseInt(searchParams.get("offset") || "0");
 
+  // Get accessible database IDs for the user
+  const accessibleDatabaseIds = await getUserDatabaseIds(user.id);
+
   const questions = await db.question.findMany({
     where: {
       archived,
+      databaseId: { in: accessibleDatabaseIds },
       ...(collectionId ? { collectionId } : {}),
     },
     include: {
@@ -108,6 +113,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Database not found" },
         { status: 404 }
+      );
+    }
+
+    // Check if user has QUERY access to this database
+    const hasAccess = await canAccessDatabase(user.id, validated.databaseId, "QUERY");
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: "You do not have permission to create questions for this database" },
+        { status: 403 }
       );
     }
 

@@ -7,17 +7,19 @@ datasource db {
 }
 
 model User {
-  id           String      @id @default(cuid())
-  email        String      @unique
-  name         String?
-  passwordHash String
-  role         String      @default("VIEWER") // ADMIN, EDITOR, VIEWER
-  groups       GroupUser[]
-  questions    Question[]
-  dashboards   Dashboard[]
-  activities   Activity[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String?
+  passwordHash        String
+  role                String               @default("VIEWER") // ADMIN, EDITOR, VIEWER
+  status              String               @default("ACTIVE") // ACTIVE, DEACTIVATED
+  groups              GroupUser[]
+  questions           Question[]
+  dashboards          Dashboard[]
+  activities          Activity[]
+  databasePermissions DatabasePermission[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model Group {
@@ -38,19 +40,20 @@ model GroupUser {
 }
 
 model DatabaseConnection {
-  id           String   @id @default(cuid())
-  name         String
-  engine       String   // POSTGRESQL, MYSQL, SQLITE, MSSQL
-  host         String
-  port         Int
+  id          String               @id @default(cuid())
+  name        String
+  engine      String               // POSTGRESQL, MYSQL, SQLITE, MSSQL
+  host        String
+  port        Int
   databaseName String
-  username     String
-  passwordEnc  String   // AES-256-GCM encrypted
-  ssl          Boolean  @default(false)
-  schemaCache  String?  // JSON string — cached introspection
+  username    String
+  passwordEnc String               // AES-256-GCM encrypted
+  ssl         Boolean              @default(false)
+  schemaCache String?              // JSON string — cached introspection
   lastSyncedAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  permissions DatabasePermission[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 }
 
 model Collection {
@@ -141,4 +144,16 @@ model Activity {
   targetId   String?
   metadata   String?  // JSON
   createdAt  DateTime @default(now())
+}
+
+model DatabasePermission {
+  id          String             @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  databaseId  String
+  database    DatabaseConnection @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  accessLevel String             // VIEW, QUERY, ADMIN
+  createdAt   DateTime           @default(now())
+
+  @@unique([userId, databaseId])
 }

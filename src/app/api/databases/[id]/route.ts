@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { canAccessDatabase } from "@/lib/permissions";
 
 export async function GET(
   request: NextRequest,
@@ -8,11 +9,22 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if ((session?.user as { role?: string })?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const user = session?.user as { id?: string; role?: string };
+
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await Promise.resolve(params);
+
+    // Check database access permission
+    const hasAccess = await canAccessDatabase(user.id, id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Admin users get full details including schemaCache
+    const isAdmin = user.role === "ADMIN";
 
     const db = await prisma.databaseConnection.findUnique({
       where: { id },
@@ -23,7 +35,7 @@ export async function GET(
         host: true,
         port: true,
         databaseName: true,
-        username: true,
+        username: isAdmin,
         ssl: true,
         schemaCache: true,
         lastSyncedAt: true,

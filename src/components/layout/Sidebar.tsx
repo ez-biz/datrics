@@ -15,6 +15,7 @@ import {
   Menu,
   FileQuestion,
   LayoutDashboard,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,6 +38,7 @@ const navItems = [
 
 const adminItems = [
   { href: "/admin/databases", label: "Databases", icon: Settings },
+  { href: "/admin/users", label: "Users", icon: Users },
 ];
 
 export function AppSidebar() {

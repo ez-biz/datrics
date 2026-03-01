@@ -27,8 +27,10 @@ InsightBase (internally codenamed Datrics) is a premium, enterprise-grade busine
 - **Flexible Layouts**: Resize and rearrange cards freely
 
 ### Enterprise Features
-- **Role-Based Access Control**: Admin vs. Viewer roles using NextAuth credentials
-- **Activity Tracking**: Audit log of question views, executions, and creations
+- **Role-Based Access Control**: Admin, Editor, and Viewer roles with granular permissions
+- **User Management**: Admin portal to create, edit, deactivate, and delete users
+- **Per-Database Permissions**: Grant users access to specific databases with VIEW, QUERY, or ADMIN levels
+- **Activity Tracking**: Audit log of question views, executions, creations, and admin actions
 - **Encrypted Credentials**: AES-256-GCM encryption for database passwords
 - **Schema Caching**: Fast schema browsing with cached introspection
 
@@ -130,6 +132,8 @@ Navigate to [http://localhost:3000](http://localhost:3000) to view the applicati
 /dashboards           - List all dashboards
 /dashboard/[id]       - View and edit a dashboard
 /admin/databases      - Manage database connections (Admin only)
+/admin/users          - Manage users and permissions (Admin only)
+/admin/users/[id]     - User detail with permissions editor (Admin only)
 ```
 
 ---
@@ -150,14 +154,40 @@ Navigate to [http://localhost:3000](http://localhost:3000) to view the applicati
 | `/api/dashboards/[id]` | GET, PUT, DELETE | Manage single dashboard |
 | `/api/dashboards/[id]/cards` | POST, PUT, DELETE | Manage dashboard cards |
 | `/api/activity` | GET | Get user activity log |
+| `/api/admin/users` | GET, POST | List/create users (Admin) |
+| `/api/admin/users/[id]` | GET, PUT, DELETE | Manage single user (Admin) |
+| `/api/admin/users/[id]/activity` | GET | Get user's activity history (Admin) |
+| `/api/admin/users/[id]/permissions` | GET, PUT | Manage user's database permissions (Admin) |
 
 ---
 
 ## Admin & Role Management
 
-By default, users that sign up are granted the `VIEWER` role. To grant `ADMIN` privileges:
+### User Roles
 
-### Method 1: Environment Variable (Recommended)
+| Role | Description |
+|------|-------------|
+| `ADMIN` | Full access to all features, databases, and user management |
+| `EDITOR` | Can create and edit questions/dashboards on permitted databases |
+| `VIEWER` | Read-only access to questions/dashboards on permitted databases |
+
+By default, users that sign up are granted the `VIEWER` role.
+
+### Database Permissions
+
+Non-admin users require explicit database permissions to access data:
+
+| Level | Description |
+|-------|-------------|
+| `VIEW` | Can view schema and saved questions |
+| `QUERY` | Can run queries and create questions |
+| `ADMIN` | Full database administration |
+
+Admin users automatically have full access to all databases.
+
+### Granting Admin Privileges
+
+#### Method 1: Environment Variable (Recommended)
 
 Configure the `ADMIN_EMAIL` in your `.env` file. During your next login or signup with this exact email address, the system will automatically upgrade your role to `ADMIN`.
 
@@ -165,7 +195,7 @@ Configure the `ADMIN_EMAIL` in your `.env` file. During your next login or signu
 ADMIN_EMAIL="your-email@example.com"
 ```
 
-### Method 2: Command Line Script
+#### Method 2: Command Line Script
 
 ```bash
 # Upgrade a specific user to ADMIN
@@ -175,7 +205,20 @@ npm run make-admin your-email@example.com
 npm run make-admin
 ```
 
-Once you have `ADMIN` privileges, a new **Admin -> Databases** section will appear in the application sidebar.
+### Admin Portal
+
+Once you have `ADMIN` privileges, the sidebar will show:
+
+- **Admin -> Databases**: Manage database connections
+- **Admin -> Users**: Manage users, roles, and permissions
+
+From the Users admin page, you can:
+- Create new users with specific roles
+- Change user roles (Admin/Editor/Viewer)
+- Activate or deactivate user accounts
+- Grant per-database access permissions
+- View user activity history
+- Delete users
 
 ---
 

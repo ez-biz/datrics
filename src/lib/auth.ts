@@ -33,6 +33,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        // Check if user is deactivated
+        if ((user as { status?: string }).status === "DEACTIVATED") {
+          return null;
+        }
+
         let role = user.role;
         const adminEmail = process.env.ADMIN_EMAIL;
 

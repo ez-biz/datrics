@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { encrypt } from "@/lib/encryption";
+import { encrypt, decrypt } from "@/lib/encryption";
 import { getUserDatabaseIds } from "@/lib/permissions";
+import { introspectSchema } from "@/lib/query-engine/schema-builder";
 
 export async function GET(request: NextRequest) {
   try {
@@ -123,6 +124,30 @@ export async function POST(request: NextRequest) {
         createdAt: true,
       },
     });
+
+    // Auto-sync schema after creation (non-blocking — don't fail the response if sync fails)
+    try {
+      const schemaGraph = await introspectSchema({
+        engine,
+        host,
+        port: parseInt(port, 10),
+        databaseName,
+        username,
+        password,
+        ssl: Boolean(ssl),
+      });
+
+      await prisma.databaseConnection.update({
+        where: { id: db.id },
+        data: {
+          schemaCache: JSON.stringify(schemaGraph),
+          lastSyncedAt: new Date(),
+        },
+      });
+    } catch (syncError) {
+      console.warn("Auto-sync failed after database creation:", syncError);
+      // Non-critical — user can manually sync later
+    }
 
     return NextResponse.json(db, { status: 201 });
   } catch (error) {

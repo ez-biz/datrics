@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -64,6 +64,39 @@ export default function QuestionPage({
   const [error, setError] = useState<string | null>(null);
   const [generatedSql, setGeneratedSql] = useState("");
   const [vizSettings, setVizSettings] = useState<VizSettings>({ chartType: "table" });
+
+  const hasUserChangedViz = useRef(false);
+  const vizSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced auto-save for vizSettings changes
+  const handleVizSettingsChange = useCallback(
+    (newSettings: VizSettings) => {
+      setVizSettings(newSettings);
+      hasUserChangedViz.current = true;
+
+      if (vizSaveTimer.current) clearTimeout(vizSaveTimer.current);
+      vizSaveTimer.current = setTimeout(async () => {
+        if (!question) return;
+        try {
+          await fetch(`/api/questions/${question.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ vizSettings: newSettings }),
+          });
+          toast.success("Chart settings saved", { duration: 1500 });
+        } catch {
+          // Non-critical
+        }
+      }, 2000);
+    },
+    [question]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (vizSaveTimer.current) clearTimeout(vizSaveTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     fetchQuestion();
@@ -229,7 +262,14 @@ export default function QuestionPage({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem
+                disabled={question.type !== "NATIVE_SQL"}
+                onClick={() => {
+                  if (question.type === "NATIVE_SQL") {
+                    router.push(`/sql?edit=${question.id}`);
+                  }
+                }}
+              >
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
@@ -305,7 +345,7 @@ export default function QuestionPage({
                   columns={result.columns}
                   rows={result.rows}
                   vizSettings={vizSettings}
-                  onVizSettingsChange={setVizSettings}
+                  onVizSettingsChange={handleVizSettingsChange}
                 />
               </Card>
             )}

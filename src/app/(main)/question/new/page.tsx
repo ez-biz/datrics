@@ -232,6 +232,9 @@ export default function NewQuestionPage() {
             vizSettings={vizSettings}
             disabled={!store.sourceTable || !result}
             collectionId={collectionId}
+            columns={result?.columns}
+            rows={result?.rows}
+            onVizSettingsChange={setVizSettings}
           />
         </div>
       </div>

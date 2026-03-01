@@ -115,7 +115,7 @@ export function AnimatedDashboard({ isAdmin }: { isAdmin: boolean }) {
 
         <motion.div variants={item}>
           <Link
-            href="/sql"
+            href="/question/new?mode=sql"
             className="group flex flex-col gap-3 p-6 rounded-xl border bg-card hover:shadow-md hover:border-primary/30 transition-all h-full"
           >
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-500/10 text-orange-500">
@@ -123,10 +123,10 @@ export function AnimatedDashboard({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <div>
               <h3 className="font-semibold group-hover:text-primary transition-colors">
-                SQL Editor
+                Write SQL
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Write and execute raw SQL queries
+                Create a question with raw SQL
               </p>
             </div>
           </Link>

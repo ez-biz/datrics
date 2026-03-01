@@ -266,7 +266,7 @@ export default function QuestionPage({
                 disabled={question.type !== "NATIVE_SQL"}
                 onClick={() => {
                   if (question.type === "NATIVE_SQL") {
-                    router.push(`/sql?edit=${question.id}`);
+                    router.push(`/question/new?mode=sql&edit=${question.id}`);
                   }
                 }}
               >

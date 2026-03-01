@@ -49,6 +49,7 @@ interface QueryChartProps {
   rows: Record<string, unknown>[];
   vizSettings?: VizSettings;
   onVizSettingsChange?: (settings: VizSettings) => void;
+  hideControls?: boolean;
 }
 
 export interface VizSettings {
@@ -104,6 +105,7 @@ export function QueryChart({
   rows,
   vizSettings,
   onVizSettingsChange,
+  hideControls,
 }: QueryChartProps) {
   // Auto-detect best chart settings
   const autoSettings = useMemo(() => {
@@ -155,11 +157,13 @@ export function QueryChart({
 
     return (
       <div className="flex flex-col gap-4">
-        <ChartControls
-          columns={columns}
-          settings={localSettings}
-          onUpdate={updateSettings}
-        />
+        {!hideControls && (
+          <ChartControls
+            columns={columns}
+            settings={localSettings}
+            onUpdate={updateSettings}
+          />
+        )}
         <Card className="p-8 flex items-center justify-center">
           <div className="text-center">
             <div className="text-5xl font-bold text-primary">
@@ -176,13 +180,15 @@ export function QueryChart({
 
   return (
     <div className="flex flex-col gap-4">
-      <ChartControls
-        columns={columns}
-        settings={localSettings}
-        onUpdate={updateSettings}
-      />
+      {!hideControls && (
+        <ChartControls
+          columns={columns}
+          settings={localSettings}
+          onUpdate={updateSettings}
+        />
+      )}
 
-      <div className="h-[350px] w-full">
+      <div className={hideControls ? "h-full w-full min-h-[200px]" : "h-[350px] w-full"}>
         <ResponsiveContainer width="100%" height="100%">
           {localSettings.chartType === "bar" ? (
             <BarChart data={chartData}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -11,24 +11,18 @@ import {
   Calculator,
   ArrowDownAZ,
   Play,
-  Save,
   Code2,
   ChevronRight,
   ChevronDown,
+  Terminal,
+  MousePointerClick,
 } from "lucide-react";
 
 import { useQueryBuilderStore } from "@/stores/query-builder-store";
 import { generateSQL } from "@/lib/query-engine/sql-generator";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { DatabaseSelector } from "@/components/query/builder/DatabaseSelector";
@@ -40,28 +34,111 @@ import { SortLimitBuilder } from "@/components/query/builder/SortLimitBuilder";
 import { ResultsTable } from "@/components/query/ResultsTable";
 import { QueryChart, VizSettings } from "@/components/query/QueryChart";
 import { SaveQuestionDialog } from "@/components/query/SaveQuestionDialog";
+import { SqlEditorPanel } from "@/components/query/SqlEditorPanel";
 
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export default function NewQuestionPage() {
+  return (
+    <Suspense>
+      <NewQuestionInner />
+    </Suspense>
+  );
+}
+
+type QuestionMode = "visual" | "sql";
+
+function NewQuestionInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const collectionId = searchParams.get("collectionId");
+  const editQuestionId = searchParams.get("edit");
+  const modeParam = searchParams.get("mode");
+
+  const [mode, setMode] = useState<QuestionMode>(
+    modeParam === "sql" || editQuestionId ? "sql" : "visual"
+  );
+
+  const handleModeChange = (newMode: string) => {
+    setMode(newMode as QuestionMode);
+    // Update URL without full navigation
+    const params = new URLSearchParams(searchParams.toString());
+    if (newMode === "sql") {
+      params.set("mode", "sql");
+    } else {
+      params.delete("mode");
+    }
+    // Keep collectionId if present
+    router.replace(`/question/new?${params.toString()}`, { scroll: false });
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* Mode Selector Header */}
+      <div className="px-6 py-3 border-b bg-background flex items-center gap-4">
+        <h1 className="text-xl font-bold">New Question</h1>
+        <div className="flex items-center bg-muted rounded-lg p-1">
+          <button
+            onClick={() => handleModeChange("visual")}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              mode === "visual"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <MousePointerClick className="h-4 w-4" />
+            Visual Builder
+          </button>
+          <button
+            onClick={() => handleModeChange("sql")}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              mode === "sql"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Terminal className="h-4 w-4" />
+            SQL
+          </button>
+        </div>
+      </div>
+
+      {/* Content based on mode */}
+      <div className="flex-1 overflow-hidden">
+        {mode === "visual" ? (
+          <VisualBuilderMode collectionId={collectionId} />
+        ) : (
+          <SqlEditorPanel
+            editQuestionId={editQuestionId}
+            collectionId={collectionId}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VisualBuilderMode({
+  collectionId,
+}: {
+  collectionId: string | null;
+}) {
   const store = useQueryBuilderStore();
 
   const [engine, setEngine] = useState<"POSTGRESQL" | "MYSQL" | "SQLITE">(
-    "POSTGRESQL",
+    "POSTGRESQL"
   );
   const [generatedSql, setGeneratedSql] = useState("");
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [vizSettings, setVizSettings] = useState<VizSettings>({ chartType: "table" });
+  const [vizSettings, setVizSettings] = useState<VizSettings>({
+    chartType: "table",
+  });
   const [activeTab, setActiveTab] = useState<string>("results");
 
-  // Fetch engine for syntax highlighting & generation
   useEffect(() => {
     if (!store.databaseId) return;
     fetch(`/api/databases/`)
@@ -72,7 +149,6 @@ export default function NewQuestionPage() {
       });
   }, [store.databaseId]);
 
-  // Generate SQL dynamically when state changes
   useEffect(() => {
     if (!store.databaseId || !store.sourceTable) {
       setGeneratedSql("");
@@ -81,7 +157,7 @@ export default function NewQuestionPage() {
     try {
       const aqr = store.toAbstractQuery();
       const result = generateSQL(aqr, engine);
-      setGeneratedSql(result.sql); // Note: parameters not shown in preview for simplicity
+      setGeneratedSql(result.sql);
     } catch (e: any) {
       setGeneratedSql(`-- Error generating SQL: ${e.message}`);
     }
@@ -155,7 +231,7 @@ export default function NewQuestionPage() {
       id: "columns",
       title: "3. Columns",
       icon: Columns3,
-      isComplete: true, // Optional step
+      isComplete: true,
       summary:
         store.columns.length === 0
           ? "All (*)"
@@ -204,39 +280,32 @@ export default function NewQuestionPage() {
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] bg-muted/20">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-background">
-        <div>
-          <h1 className="text-xl font-bold">New Question</h1>
-          <p className="text-sm text-muted-foreground">
-            Build a query visually without writing SQL.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => store.reset()}>
-            Reset
-          </Button>
-          <Button
-            onClick={runQuery}
-            disabled={!store.sourceTable || running}
-            className="gap-2"
-          >
-            <Play className="h-4 w-4" />
-            {running ? "Running..." : "Run Query"}
-          </Button>
-          <SaveQuestionDialog
-            databaseId={store.databaseId}
-            queryDefinition={store.toAbstractQuery()}
-            type="QUERY_BUILDER"
-            vizSettings={vizSettings}
-            disabled={!store.sourceTable || !result}
-            collectionId={collectionId}
-            columns={result?.columns}
-            rows={result?.rows}
-            onVizSettingsChange={setVizSettings}
-          />
-        </div>
+    <div className="flex flex-col h-full bg-muted/20">
+      {/* Visual Builder Toolbar */}
+      <div className="flex items-center justify-end px-6 py-2 border-b bg-background gap-3">
+        <Button variant="outline" size="sm" onClick={() => store.reset()}>
+          Reset
+        </Button>
+        <Button
+          size="sm"
+          onClick={runQuery}
+          disabled={!store.sourceTable || running}
+          className="gap-2"
+        >
+          <Play className="h-4 w-4" />
+          {running ? "Running..." : "Run Query"}
+        </Button>
+        <SaveQuestionDialog
+          databaseId={store.databaseId}
+          queryDefinition={store.toAbstractQuery()}
+          type="QUERY_BUILDER"
+          vizSettings={vizSettings}
+          disabled={!store.sourceTable || !result}
+          collectionId={collectionId}
+          columns={result?.columns}
+          rows={result?.rows}
+          onVizSettingsChange={setVizSettings}
+        />
       </div>
 
       {/* Main Content */}
@@ -289,12 +358,10 @@ export default function NewQuestionPage() {
                   )}
                 </div>
 
-                {/* Step Content Content Dropdown */}
                 {isActive && (
                   <div className="p-4 bg-background border-t border-border/50 animate-in slide-in-from-top-2 duration-200">
                     {step.content}
 
-                    {/* Auto-advance helper */}
                     {index < steps.length - 1 && (
                       <Button
                         variant="secondary"
@@ -317,7 +384,11 @@ export default function NewQuestionPage() {
 
         {/* Right Content: Preview & Results */}
         <div className="flex-1 flex flex-col bg-muted/10 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex-1 flex flex-col h-full"
+          >
             <div className="px-6 py-3 border-b bg-background flex items-center justify-between">
               <TabsList className="h-9">
                 <TabsTrigger value="results" className="text-xs px-4">
@@ -342,7 +413,9 @@ export default function NewQuestionPage() {
                     <div className="h-12 w-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mx-auto mb-4">
                       <Play className="h-6 w-6" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-1">Ready to run</h3>
+                    <h3 className="text-lg font-semibold mb-1">
+                      Ready to run
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       {store.sourceTable
                         ? "Click Run Query to execute your visual builder logic."
@@ -395,7 +468,9 @@ export default function NewQuestionPage() {
                     <div className="h-12 w-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mx-auto mb-4">
                       <Play className="h-6 w-6" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-1">No data to visualize</h3>
+                    <h3 className="text-lg font-semibold mb-1">
+                      No data to visualize
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       Run a query first to see chart visualization options.
                     </p>
@@ -424,7 +499,10 @@ export default function NewQuestionPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="sql" className="m-0 p-6 flex-1 overflow-hidden">
+            <TabsContent
+              value="sql"
+              className="m-0 p-6 flex-1 overflow-hidden"
+            >
               <Card className="h-full flex flex-col shadow-sm border-muted overflow-hidden bg-[#1E1E1E]">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-border/10 bg-black/20">
                   <span className="text-xs font-mono text-muted-foreground">
